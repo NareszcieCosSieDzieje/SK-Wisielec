@@ -48,8 +48,6 @@ else()
     statuses.hpp
     client.cpp
     client.h
-    server/server.cpp
-    server/srv.out
   )
 endif()
 

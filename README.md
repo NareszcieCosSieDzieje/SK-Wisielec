@@ -1,13 +1,17 @@
 # SK-Wisielec
 
-Paweł i Kamil ----------------------------------------
+<hr>
+<h3>Paweł i Kamil</h3> 
 * wylogowanie
 * dokończenie sesji + odpowiedzi w razie błędu
 * gra
 
-Kamil ------------------------------------------------
+<hr>
+<h3>Kamil</h3> 
+* tworzenie/dołączanie do sesji
+* rejestracja
 
-
-Paweł ------------------------------------------------
+<hr>
+<h3>Paweł</h3> 
 
 

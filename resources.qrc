@@ -1,2 +1,18 @@
-<!DOCTYPE RCC>
-<RCC version="1.0"/>
+<RCC>
+    <qresource prefix="/resources">
+        <file>img/s0.jpg</file>
+        <file>img/s1.jpg</file>
+        <file>img/s2.jpg</file>
+        <file>img/s3.jpg</file>
+        <file>img/s4.jpg</file>
+        <file>img/s5.jpg</file>
+        <file>img/s6.jpg</file>
+        <file>img/s7.jpg</file>
+        <file>img/s8.jpg</file>
+        <file>img/s9.jpg</file>
+        <file>img/p0.jpg</file>
+        <file>img/p1.jpg</file>
+        <file>img/p2.jpg</file>
+        <file>img/p3.jpg</file>
+    </qresource>
+</RCC>

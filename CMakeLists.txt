@@ -8,8 +8,10 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 # QtCreator supports the following variables for Android, which are identical to qmake Android variables.
 # Check http://doc.qt.io/qt-5/deployment-android.html for more information.
@@ -24,7 +26,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #    endif()
 #endif()
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Sql REQUIRED)
 
 if(ANDROID)
   add_library(Wisielec SHARED
@@ -39,7 +41,16 @@ else()
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    constants.h
+    resources.qrc
+    player.cpp
+    player.hpp
+    statuses.hpp
+    client.cpp
+    client.h
+    server/server.cpp
+    server/srv.out
   )
 endif()
 
-target_link_libraries(Wisielec PRIVATE Qt5::Widgets)
+target_link_libraries(Wisielec PRIVATE Qt5::Widgets Qt5::Sql)

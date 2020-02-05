@@ -53,6 +53,7 @@ To to:
 
 6. Funkcja joinSession(): używany do odbioru i wysyłania bufor char[100].
 Klient powinien obsługiwać taką sytuację, że jak 4 graczy w sesji na dany moemnt to od razu nie pozwala się połączyć bo bez sensu.
+Do tego jakaś zmienna bool'owska w kliencie ze jest w sesji i wtedy nie moze dolaczyc do nowej.
 Klient dołącza/tworzy sesje.
 Żeby dołączyć do sesji klient musi wysłać wiadomość: "JOIN-SESSION\0".
 Wtedy serwer włącza wątek który obsłuży to, ten wątek. Join session oczekuje bufora char[20] z numerem sesji.

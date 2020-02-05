@@ -1,0 +1,75 @@
+
+std::this_thread::sleep_for(std::chrono::seconds(1));
+
+Do głównych wiadomości żeby wejść w funkcję jest jeden bufor typu char[512]; Ten bufor jest do ogólnych komunikatów co serwer ma zrobić.
+Potem w funkcjach są już inne i są wyszczególnione w opisach na dole.
+
+
+1. Serwer startuje.
+2. Osobny wątek zaczyna nasłuchiwać na połączenia.
+3. Wątek w mainie po dodaniu nowego klienta nasłuchuje jego wiadomości.
+
+4. Funkcja clientValidation():
+Po włączeniu programu i połączeniem się z serwerem, należy się zalogować/zarejestrować.
+WYŚLIJ SYGNAŁ: "CLIENT-VALIDATION\0"
+Wtedy wchodzi osobny wątek na to w serwerze.
+1. Klient wysyła bufor typu char[10] z danymi o typie połączena. Logowanie = 1, rejestracja = 2. Serwer to czyta.
+2. Następnie wysyła char[100]: "login-haslo". Serwer czyta to.
+3. W przypadku logowania jak i rejestracji jeśli pomyślne to 
+serwer wyśle "AUTH-OK\0", a jak fail to "AUTH-FAIL\0".
+Logowanie daje fail jak login lub haslo nie znalezione w bazie, a rejestracja jak nick jest zajęty.
+
+5. Po zalogowaniu itp. Klient niech wysyła co sekundę wiadomość typu: "SEND-SESSION-DATA\0" i wtedy odbierze te dane. Ta funkcja do odbierania jest w kliencie starym. 
+To to:
+
+  char msg[1024]; //TODO: WIEKSZY ROZMIAR BUFORA???
+        readData(clientFd, msg, sizeof(msg)); //FIXME: MUTTTEX MOZE BO BLOKADA PRZY WATKU
+
+        if(msg[0] == '\0'){
+            printf("No sessions available.\n");
+        }
+        else {
+            printf("Sessions found.\n");
+            playerSessions.clear();
+            players.clear();
+            char* s;
+            s = strtok(msg,":"); // TODO: jak nie zadziała to daj ze delimiter ma wsystkie znaki
+            if (s == nullptr){ //TODO: czy to sprawdzać wogóle
+                //error;
+                printf("strtok error.\n");
+            }
+            long int numSessions = strtol(s, nullptr, 10);
+            for( int i =0; i < numSessions; i++ ) {
+                s = strtok(msg, "-");
+                long int sessionID = strtol(s, nullptr, 10);
+                s = strtok(msg, ",");
+                long int numPlayers = strtol(s, nullptr, 10);
+                for (int j = 0; j < numPlayers; j++) {
+                    s = strtok(msg, ",;");
+                    players.push_back(std::string(s));
+                }
+                playerSessions.insert(std::pair<int, std::vector<std::string>>(sessionID, players));
+
+
+6. Funkcja joinSession(): używany do odbioru i wysyłania bufor char[100].
+Klient powinien obsługiwać taką sytuację, że jak 4 graczy w sesji na dany moemnt to od razu nie pozwala się połączyć bo bez sensu.
+Klient dołącza/tworzy sesje.
+Żeby dołączyć do sesji klient musi wysłać wiadomość: "JOIN-SESSION\0".
+Wtedy serwer włącza wątek który obsłuży to, ten wątek
+join session operuje na buforze typu char[100].
+Czeka na sessionMode, 0 - tworzy nową sesje; > 0 to id istniejacej sesji i wtedy dołączyć próbuje.
+Po odebraniu sessionMode, wysyła wiadomość:
+- Typy wysyłanych danych przez serwer:
+* "SESSION-1\0" nowa sesja stworzona nie ma innych;
+* "SESSION-tutaj numer\0" nowa sesja o numerze, lub dołączanie do istniejącej;
+* "SESSION-MAX\0"  nie można stworzyć sesji limit przekroczony;
+* "SESSION-BUSY\0" sesja jest pełna, nie da sie dolaczyc;
+
+
+7. Funkcja sessionLoop():
+Tutaj powinno być tak, że jak stworzył sesję ktoś to KLIENT pamięta ze jest hostem i wtedy tylko host może wysłać sygnał
+"START-SESSION\0", który odpala sesję. Klient sprawdza czy jest min 2 graczy jak nie to nie startuje sesji. Jak juz wystartuje dostaje odpowiedz zwrotna: jak OK to dostaje "START-SESSION-OK\0", jak za mało graczy jednak to "START-SESSION-FAIL\0".
+
+działanie sesji jeszcze pisze i rozpykuje...
+
+

@@ -10,23 +10,24 @@
 #include <mutex>
 #include <errno.h>
 #include <iostream>
+#include <set>
 
 #include "statuses.hpp"
 #include "player.hpp"
 #include "player.cpp"
-#include "user_loader.hpp"
+#include "data_loader.hpp"
 
 
 //=====================================GLOBALS============================================\\
 
 std::vector<std::thread> threadVector;
-std::vector<int> clientSockets;
-
+std::vector<int> clientSockets; //FIXME:!
 
 std::map<int, Player> clientMap;
 std::mutex clientMapMutex;
 
 std::map<int, std::vector<Player>> playerSessions;
+std::map<int, std::vector<int>> playerSessionsFds;
 std::mutex playerSessionsMutex;
 
 int epollFd{};
@@ -48,7 +49,7 @@ const int maxEvents = maxSessions * playersPerSession;
 
 ssize_t readData(int fd, char * buffer, ssize_t buffsize);
 void writeData(int fd, char * buffer, ssize_t count);
-void sigHandler(int signal);
+void sigHandler(int signal); //TODO: DOPRACUJ TO !!!
 void startServer(void);
 void listenLoop(void);
 void sendAvailableSessions(void);
@@ -57,6 +58,9 @@ void clientValidation(int newClientFd);
 void sendSessionData(int clientSocket);
 void sessionLoop(int sessionID);
 void joinSession(int clientFd);
+void addToEpoll(int fd);
+void removeFromEpoll(int fd);
+
 std::string* loadUserData(char* filePath); //TODO: zwróć array stringów
 
 
@@ -73,54 +77,124 @@ std::string* loadUserData(char* filePath); //TODO: zwróć array stringów
 int main(int argc, char* argv[]){
 
 
-    //TODO: SERVER MUSI WCZYTAC LISTE LOGINOW I HASEL I SPRAWDZAC KTORE SA ZUZYTE
-
     signal(SIGINT, sigHandler);
     signal(SIGTSTP, sigHandler);
 
     bindAddr.sin_addr.s_addr = htonl(INADDR_ANY); //TODO: ZMIEN NA ADRESOKRESLONY
 
-
     startServer();
 
-
-    std::cout<< "MAIN PO LOOP" << std::endl;
-
-
-    //obsluguj deskryptory graczy
-
-
     struct epoll_event events[maxEvents];
+
     bool polling = true;
+
+    /*
+     *
+     * obsłuż join session
+     * obsłuż start session
+     *
+     * */
+
 
     while(polling) {
 
-        printf("\nPolling for input...\n");
         int event_count = epoll_wait(epollFd, events, maxEvents, -1);
-        printf("%d ready events\n", event_count);
+        printf("Ready events: %d\n", event_count);
         for (int i = 0; i < event_count; i++) {
-
             struct epoll_event clientEvent = events[i];
             int clientFd = clientEvent.data.fd;
-            printf("Reading file descriptor '%d' -- ", clientFd);
+            printf("Czytanie z klienta o deskryptorze: '%d' -- \n", clientFd);
 
+            char msg[512];
+            int ret = readData(clientFd, msg, sizeof(msg));//TODO: jakies stale ilosci danych zeby dzialalo jakies minim z maxow
+
+            if(ret == 0){
+                polling = false;
+                //remove from epoll
+                //closeClient(clientFd);
+                //continue
+            }
+            if ( strcmp(msg, "CLIENT-VALIDATION\0") == 0){
+                removeFromEpoll(clientFd);
+                std::thread validationThread(clientValidation, clientFd); //Nowe połączenie przeslij do zweryfikowania
+                validationThread.detach();
+            } else if (strcmp(msg, "SEND-SESSION-DATA\0") == 0) {
+                    sendSessionData(clientFd);
+                    //TODO: czy inny wątek na to
+            }
+            else if( strcmp(msg, "JOIN-SESSION\0") == 0){
+                removeFromEpoll(clientFd);
+                std::thread jS(joinSession, clientFd);
+                jS.detach(); //TODO: obczaj czy ok
+            } else if (strcmp(msg, "START-SESSION\0") == 0){
+                std::string nick = clientMap[clientFd].getNick();
+                int session = 0;
+                bool found = false;
+                //TODO BLOKADA NA DODAWANIA PRZY STARCIE SESJI!!!!
+                for(auto &elem: playerSessions){
+                    for(auto &plr : elem.second){
+                        if (plr.getNick() == nick){
+                            session = elem.first;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found){
+                        break;
+                    }
+                }
+                if (playerSessions[session].size() >= 2){
+                    std::vector<std::string> recipients;
+                    std::vector<int> recipientFds;
+                    for(auto &p : playerSessions[session]){
+                        recipients.push_back(p.getNick());
+                    }
+                    for(auto &item: clientMap){
+                        item.second.getNick()
+                    }
+
+                    strcpy(msg, "START-SESSION-OK\0");
+                    write(clientFd, msg, sizeof(msg));
+                    // TODO: trzeba spromptować każdego do uruchomienia sesji
+
+
+                    //start
+                    // TODO: WYRZUĆ GRACZY Z EPOLLA!
+
+                } else {
+                    strcpy(msg, "START-SESSION-FAIL\0");
+                    write(clientFd, msg, sizeof(msg));
+                }
+
+
+                //jak 2 graczy min to odpal sesje
+                //odpowiedz jak ok "START-SESSION-OK\0"
+                //odpowiedz jak za malo graczy "START-SESSION-FAIL\0"
+                //new thread sessionLoop
+
+            }
+            else if( strcmp(msg, "DISCONNECTING\0") == 0){
+                removeFromEpoll(clientFd);
+
+                // include upper stuff in close client closeCLient
+            }
+            else if ( strcmp(msg,"LOG-OUT\0") == 0){ //FIXME: JAKI KOMUNIKAT
+
+                //closeClient()
+
+            }
             /*
             if( clientEvent.events & EPOLLIN && clientEvent.data.fd == sock ){
                 if read == 0 then zamknij klienta
             }
 
-            bytes_read = read(events[i].data.fd, read_buffer, READ_SIZE);
-            printf("%zd bytes read.\n", bytes_read);
-            read_buffer[bytes_read] = '\0';
-            printf("Read '%s'\n", read_buffer);
             */
 
         }
     }
 
-          //FIXME: xd
     if (close(epollFd) < 0){
-        perror("Server epoll close error\n");
+        perror("Server can't close epoll! - error.\n");
         exit(EPOLL_CLOSE);
     }
 
@@ -140,26 +214,26 @@ int main(int argc, char* argv[]){
 
 void startServer(void){
     if( (serverFd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
-        perror("Failed to create socket.\n");
+        perror("Server failed to create socket.\n");
         exit(SOCKET_CREATE);
     }
     int enable = 1;
     if( setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0 ){
-        perror("Setsockopt(SO_REUSEADDR) failed.\n");
+        perror("Setsockopt(SO_REUSEADDR) in server failed.\n");
         exit(SOCKET_REEUSE);
     }
     if( bind(serverFd, (sockaddr*)&bindAddr, sizeof(bindAddr)) < 0 ){
-        perror("Failed to bind the socket.\n");
+        perror("Server failed to bind the socket.\n");
         exit(SOCKET_BIND);
     }
     if( listen(serverFd, 5) < 0 ){
-        perror("Failed to listen.\n");
+        perror("Server failed to listen.\n");
         exit(SOCKET_LISTEN);
     }
     printf("1\n");
     epollFd = epoll_create1(0);
     if (epollFd < 0){
-        perror("Server epoll error!\n");
+        perror("Server epoll create error!\n");
         exit(EPOLL_ERROR);
     }
     std::thread loopThread(listenLoop); //Uruchom wątek nasłuchujący nowych połączeń.
@@ -167,18 +241,23 @@ void startServer(void){
 }
 
 
-//TODO: czy wątek/funkcja ma cały czas w pętli nawalać accepty? czy lepsze rozwiązanie jest?
+
 void listenLoop(void){
     while(true){
         sockaddr_in clientAddr{};
         socklen_t cliLen = sizeof(clientAddr);
+        if(clientMap.size() == maxSessions*playersPerSession){ //FIXME: CZY TO JEST OKEJ?
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            continue;
+        }
         int newClient = accept(serverFd, (struct sockaddr *)&clientAddr, &cliLen); //Nawiąż nowe połączenie z klientem.
         if (newClient < 0) {
-            perror("ERROR on accept.\n");
+            perror("Server ERROR on accept.\n");
             exit(SOCKET_ACCEPT);
         }
-        std::thread validationThread(clientValidation, newClient); //Nowe połączenie przeslij do zweryfikowania
-        validationThread.detach();
+        addToEpoll(newClient);
+        //std::thread validationThread(clientValidation, newClient); //Nowe połączenie przeslij do zweryfikowania
+        //validationThread.detach();
     }
     //TODO: jeśli jakis condition_variable to zakoncz prace?
 }
@@ -186,8 +265,8 @@ void listenLoop(void){
 
 void clientValidation(int newClientFd){
 
-    std::cout << "WERYFIKACJA KLIENTA\n" << std::endl;
-    //TODO: sprawdz login haslo jesli rip to wywal, jak ok to dodaj, mozliwe jeszcze sprawdzanie portu ale jak jest haslo to raczej bez sensu?
+    std::cout << "WERYFIKACJA KLIENTA - fd: " << newClientFd << std::endl;
+    //TODO: Czy sprawdzać port klienta?
 
     const unsigned int signin = 1;
     const unsigned int signup = 2;
@@ -197,7 +276,6 @@ void clientValidation(int newClientFd){
     if(xRead != 10){
         perror("User data sending error 1.\n");
     }
-    std::cout << "con type: " << conType << std::endl; ;
     int cT = (int) strtol(conType, nullptr, 10);
     char msg[100];
     xRead = readData(newClientFd, msg, sizeof(msg) );
@@ -223,15 +301,14 @@ void clientValidation(int newClientFd){
     std::string passwordS(pass);
 
     if(cT == signup){
-        if (!searchForUserData(loginS, passwordS)) {
+        if (!searchForUserData(loginS, passwordS, true)) {
             addUser(loginS, passwordS);
             userExists = true;
-        } else {
-            // TODO: WHAT TO DO THEN cant log error send
-        }
+        } //else na koncu obejmuje jak nie przejdzie czyli AUTH-FAIL
     } else if (cT == signin){
-        userExists = searchForUserData(loginS, passwordS); //WYWOŁANIE FUNKCJI CZYTAJĄCEJ Z PLIKU
+        userExists = searchForUserData(loginS, passwordS, false); //WYWOŁANIE FUNKCJI CZYTAJĄCEJ Z PLIKU
     }
+    char authMsg[100];
     if (userExists) {
         Player newPlayer(login, pass);
         //Dodaj do mapy klientow -graczy
@@ -239,24 +316,15 @@ void clientValidation(int newClientFd){
         clientMap.insert(std::pair<int, Player>(newClientFd, newPlayer));
         clientMapMutex.unlock();
 
-        //TODO: czy events okej??
-        struct epoll_event event{};
-        event.events = EPOLLIN;
-        event.data.fd = newClientFd;
+        addToEpoll(newClientFd);
 
-        if(epoll_ctl(epollFd, EPOLL_CTL_ADD, newClientFd, &event))
-        {
-            fprintf(stderr, "Failed to add file descriptor to epoll.\n");
-            close(epollFd);
-            exit(12); //FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!:
-        }
-        //Wyslij ack ze sie zalogował
-        writeData(newClientFd, "AUTH-OK\0", sizeof("AUTH-OK\0"));
-        joinSession(newClientFd);
+        strcpy(authMsg, "AUTH-OK\0");  //Wyslij ack ze sie zalogował
+        writeData(newClientFd, authMsg, sizeof(authMsg));
     } else {
-        writeData(newClientFd, "AUTH-FAIL\0", sizeof("AUTH-FAIL\0"));
-        std::cout << "zamykam połączenie z klientem: " << newClientFd << std::endl;
-        stopConnection(newClientFd);
+        strcpy(authMsg, "AUTH-FAIL\0");
+        writeData(newClientFd, authMsg, sizeof(authMsg));
+        std::cout << "Client authorization didnt succeed: " << newClientFd << std::endl;
+        //stopConnection(newClientFd);
         //std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
@@ -265,40 +333,35 @@ void clientValidation(int newClientFd){
 void joinSession(int clientFd){
 
     Player player = clientMap[clientFd];
-
-    bool joinedSession = false;
     int sessionMode = -1;
-    while(!joinedSession){
-        sendSessionData(clientFd);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        char* sessionId;
-        int read = recv(clientFd, sessionId, sizeof(sessionId), MSG_DONTWAIT); //response non block get chosen session
-        if (read != 0){
-            sessionMode = (int) strtol(sessionId, NULL, 10);
-            joinedSession = true;
-        }
-    }
-
     int finalSessionId = -1;
+
     char buf[100];
+    char sessionId[20];
+
+    int ret = readData(clientFd, sessionId, sizeof(sessionId)); // int read = recv(clientFd, sessionId, sizeof(sessionId), MSG_DONTWAIT); //response non block get chosen session
+    sessionMode = (int) strtol(sessionId, NULL, 10);
+
     if(sessionMode < 0){
-        //error
+        perror("Server join session error - sessionMode < 0\n");
     }
-    else if (sessionMode == 0){ //TODO: JAKIES ODSWEIZANIE NUMERKOW - ZA WYSOKIE WARTOSCI?
+    else if (sessionMode == 0){ //TODO: Czy jak usuniete niskie wartosci to uzywanie od nowa? szczegol tho
+        std::vector<Player> playerVector;
+        std::vector<int> playerFds;
+        playerVector.push_back(player);
+        playerFds.push_back(clientFd);
         if (playerSessions.empty()){
             finalSessionId = 1;
-            std::vector<Player> playerVector;
-            playerVector.push_back(player);
             playerSessionsMutex.lock();
             playerSessions.insert(std::pair<int, std::vector<Player>>(finalSessionId, playerVector));
+            playerSessionsFds.insert(std::pair<int, std::vector<int>>(finalSessionId, playerFds));
             playerSessionsMutex.unlock();
             strcpy(buf, "SESSION-1\0");
         } else if (playerSessions.size() < maxSessions )   {
-            finalSessionId = playerSessions.size() +1;
-            std::vector<Player> playerVector;
-            playerVector.push_back(player);
+            finalSessionId = (int)playerSessions.size() +1;
             playerSessionsMutex.lock();
             playerSessions.insert(std::pair<int, std::vector<Player>>(finalSessionId, playerVector));
+            playerSessionsFds.insert(std::pair<int, std::vector<int>>(finalSessionId, playerFds));
             playerSessionsMutex.unlock();
             char num[10];
             sprintf (num, "%d", finalSessionId);
@@ -308,24 +371,25 @@ void joinSession(int clientFd){
         } else {
             //error nie mozna zrobic sesji;
             strcpy(buf, "SESSION-MAX\0");
-            //TODO: !!!!!!!!!!!!!!!!!!_______________________________________ WYJDZ
         }
         write(clientFd, buf, sizeof(buf));
-        //read czekaj na start od hosta!//TODO:
-        sessionLoop(finalSessionId);
     } else {
         playerSessionsMutex.lock();
-        // TODO SPRAWDZ CZY SIZE 4 jak tak to daj erro ze juz sie nie da; klient niech tez to sprawdza
         if (playerSessions[sessionMode].size() < playersPerSession){
             playerSessions[sessionMode].push_back(player);
+            char num[10];
+            sprintf (num, "%d", sessionMode);
+            strcpy(buf, "SESSION-");
+            strcat(buf, num);
+            strcat(buf, "\0");
         } else {
             strcpy(buf, "SESSION-BUSY\0");
         }
         playerSessionsMutex.lock();
         write(clientFd, buf, sizeof(buf));
     }
+    addToEpoll(clientFd);
 }
-
 
 
 //TODO: JAKI BUFOR TUTUAJ JEST                TUTAJ daj JAKIES MUTEXY DO OCZYTU????!!
@@ -354,22 +418,150 @@ void sendSessionData(int clientSocket){
 }
 
 
-// DOROBIC START SESJI WGL!!
+// TODO: DOROBIC START SESJI WGL!! w sensie ze write session start przez hosta uruchamia
 void sessionLoop(int sessionID) { //TODO: jak to rozwiązać
-    //id do rozpoznawania gracyz w sesji
+
+    //TODO: obsluga proby dolaczenia do sesji w trakcie oblsuga wywalenia kogos z sesji,
+    //TODO: za kazdym razem pobierz dane co z synchronizacja
+
+    std::map<Player, int> playerPoints{};
+
+    std::set<std::string> usedWords{};
+    const unsigned int rounds = 5;
+
+    for (int i = 0; i < rounds; i++) {
+
+        std::vector<Player> players = playerSessions[sessionID];
+        std::map<Player, int> currentPlayersFd{};
+
+        for (auto &p : players) {
+            int keyFd = 0;
+            for (auto &playerPair : clientMap) {
+                if (playerPair.second.getNick() == p.getNick()) {
+                    keyFd = playerPair.first;
+                    break;
+                }
+            }
+            currentPlayersFd.insert(std::pair<Player, int>(p, keyFd));
+            playerPoints.insert(std::pair<Player, int>(p,0)); //TODO: obczaj czy ok
+        }
+
+        std::map<int, double> winners{};
+        bool closing = false;
+        std::string randomWord;
+
+        while(true){
+            randomWord = getRandomWord();
+            auto it = usedWords.find(randomWord);
+            if(it == usedWords.end()){
+                usedWords.insert(randomWord);
+                break;
+            }
+        }
+        //wyslij slowo jakis token najpierw?
+
+        //sesja start
+
+        //Wyślij każdemu graczowi słowo.
+        for(auto &p : currentPlayersFd){
+            char buf[50];
+            strcpy(buf, randomWord.c_str());
+            writeData(p.second, buf, sizeof(buf));
+        }
+
+        auto start = std::chrono::steady_clock::now();     // start timer
+        double roundTime = 120.0; //2 minuty na rundę
+        while(true){
+            auto end = std::chrono::steady_clock::now();
+            auto time_span = static_cast<std::chrono::duration<double>>(end - start);
+
+            //TODO: nie blokujaca sprawdz po kazdym czy jest jakis wynik;
+            for (auto &p : currentPlayersFd) {
+                int keyFd = p.second;
+                char winner_buf[50];
+                int read = recv(keyFd, winner_buf, sizeof(winner_buf), MSG_DONTWAIT);
+                if (read>0){
+                    if(!closing){
+                        roundTime += 3.0;
+                        closing = true;
+                    }
+                    double time = strtod (winner_buf, nullptr);
+                    winners.insert(std::pair<int, double>(keyFd, time));
+                }
+            }
+            if (time_span.count() > roundTime ){
+                break;
+            }
+        }
+        char endMsg[100];
+        char numWin[20];
+        int winner = 0;
+        double minTime = 9999;
+        if(winners.empty()){
+            strcpy(endMsg, "WIN-0\0");
+        } else if (winners.size() == 1 ){
+            for (auto &item : winners) {
+                winner = item.first;
+            }
+            sprintf (numWin, "%d", winner);
+            strcpy(endMsg, "WIN-");
+            strcat(endMsg, numWin);
+            strcat(endMsg, "\0");
+        } else if (winners.size() > 1){
+            for (auto &item : winners) {
+                if (item.second < minTime){
+                    winner = item.first;
+                    minTime = item.second;
+                }
+            }
+            sprintf (numWin, "%d", winner);
+            strcpy(endMsg, "WIN-");
+            strcat(endMsg, numWin);
+            strcat(endMsg, "\0");
+        }
+        for (auto &points : playerPoints) {
+
+            //find player
+            // if player
+            points.second += 1;
+
+        }
+
+        for()
 
 
+        readData();
 
-    while(true){
 
+        //TODO: DOGRYWKA!
 
-        //conduct session
     }
-
-
 }
 
+
+
+/*   klient dostaje slowo i on sprawdza poprawnosc a nie serwer i on tez mierzy czas i wysyla w sekundach zaokroglonych do 5 miejsc po przecinku
+
+        int mistakesPerWord = 0;
+        mistakesPerWord = std::max((int)(randomWord.length()/3), 2); //klient
+
+        klient
+        std::chrono::steady_clock sClock;   // create an object of `steady_clock` class
+        auto start = sClock.now();     // start timer
+
+        // do stuff....
+
+        auto end = sClock.now();       // end timer (starting & ending is done by measuring the time at the moment the process started & ended respectively)
+        auto time_span = static_cast<std::chrono::duration<double>>(end - start);   // measure time span between start & end
+
+        cout<<"Operation took: "<<time_span.count()<<" seconds !!!";
+
+
 /*
+
+
+
+ /*
         Po rozpoczeciu gry host traktowany jest jak zwykly gracz. Tzn: jeśli opuści sesję, a przynajmniej dwóch innych graczy gra to 		   sesja dalej trwa.
         6. Serwer obsługuje przerwania połączeń, lub wyjście z gry. Przechowuje dane gracza na czas trwania sesji, w tym jego login. 			   Pozwalaja dołączyć do następnej rundy, w przypadku zerwania połączenia przez klienta, identyfikując go przez login.
         7. W trakcie rundy, serwer losuje słowo i wysyła je graczom, którzy muszą w określonym czasie je odgadnąć.
@@ -386,9 +578,29 @@ void sessionLoop(int sessionID) { //TODO: jak to rozwiązać
 */
 
 
+void addToEpoll(int fd){
+    struct epoll_event event{};
+    event.events = EPOLLIN;
+    event.data.fd = fd;
+
+    if( epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) < 0 ){
+        fprintf(stderr, "Failed to add file descriptor to epoll.\n");
+        close(epollFd);
+        exit(EPOLL_ADD);
+    }
+}
+
+void removeFromEpoll(int fd){
+    if ( epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, nullptr) < 0 ){
+        perror("Server failed to delete clientfd from epoll.\n");
+        close(epollFd);
+        exit(EPOLL_REMOVE);
+    }
+}
+
+
 //TODO: jakiś send że zrywamy połączenie?? to raczej w instacji danego problemu dac
 void stopConnection(int ClientFd){
-    std::cout << "Zamykam polaczenie w stopCon" << std::endl;
     if (shutdown(ClientFd, SHUT_RDWR) < 0 ){
         perror("Failed to disconnect with the client.\n");
         //FIXME: exit?

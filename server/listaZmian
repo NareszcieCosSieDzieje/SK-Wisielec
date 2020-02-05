@@ -55,10 +55,9 @@ To to:
 Klient powinien obsługiwać taką sytuację, że jak 4 graczy w sesji na dany moemnt to od razu nie pozwala się połączyć bo bez sensu.
 Klient dołącza/tworzy sesje.
 Żeby dołączyć do sesji klient musi wysłać wiadomość: "JOIN-SESSION\0".
-Wtedy serwer włącza wątek który obsłuży to, ten wątek
-join session operuje na buforze typu char[100].
+Wtedy serwer włącza wątek który obsłuży to, ten wątek. Join session oczekuje bufora char[20] z numerem sesji.
 Czeka na sessionMode, 0 - tworzy nową sesje; > 0 to id istniejacej sesji i wtedy dołączyć próbuje.
-Po odebraniu sessionMode, wysyła wiadomość:
+Potem join session operuje na buforze typu char[100] wysyłając odpowiedź.
 - Typy wysyłanych danych przez serwer:
 * "SESSION-1\0" nowa sesja stworzona nie ma innych;
 * "SESSION-tutaj numer\0" nowa sesja o numerze, lub dołączanie do istniejącej;

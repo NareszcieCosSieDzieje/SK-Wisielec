@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <iostream>
 #include <set>
+#include <algorithm>
 
 #include "statuses.hpp"
 #include "player.hpp"
@@ -127,8 +128,12 @@ int main(int argc, char* argv[]){
                 std::thread jS(joinSession, clientFd);
                 jS.detach(); //TODO: obczaj czy ok
             } else if (strcmp(msg, "START-SESSION\0") == 0){
-                std::string nick = clientMap[clientFd].getNick();
+
                 int session = 0;
+                char msg[100];
+
+                std::string nick = clientMap[clientFd].getNick();
+
                 bool found = false;
                 //TODO BLOKADA NA DODAWANIA PRZY STARCIE SESJI!!!!
                 for(auto &elem: playerSessions){
@@ -144,34 +149,38 @@ int main(int argc, char* argv[]){
                     }
                 }
                 if (playerSessions[session].size() >= 2){
-                    std::vector<std::string> recipients;
-                    std::vector<int> recipientFds;
-                    for(auto &p : playerSessions[session]){
-                        recipients.push_back(p.getNick());
-                    }
-                    for(auto &item: clientMap){
-                        item.second.getNick()
-                    }
-
                     strcpy(msg, "START-SESSION-OK\0");
-                    write(clientFd, msg, sizeof(msg));
-                    // TODO: trzeba spromptować każdego do uruchomienia sesji
-
-
-                    //start
-                    // TODO: WYRZUĆ GRACZY Z EPOLLA!
-
+                    for(auto &client: playerSessionsFds[session]){
+                        removeFromEpoll(client);
+                        write(client, msg, sizeof(msg)); //spromptować każdego do uruchomienia sesji
+                    }
+                    // TODO: przywroc w sesji GRACZY do EPOLLA!--------------------------------------
+                    std::thread sT(sessionLoop, session);
+                    sT.detach(); //FIXME:??
                 } else {
                     strcpy(msg, "START-SESSION-FAIL\0");
                     write(clientFd, msg, sizeof(msg));
                 }
+            } else if (strcmp(msg, "DISSOCIATE-SESSION\0") == 0) {
 
+                //TODO: TUTUAJ JAKIES OGARNIANIE KIEDY MOZNA GO WYRZUCIC---------------------------------------------------------------
 
-                //jak 2 graczy min to odpal sesje
-                //odpowiedz jak ok "START-SESSION-OK\0"
-                //odpowiedz jak za malo graczy "START-SESSION-FAIL\0"
-                //new thread sessionLoop
+                Player p = clientMap[clientFd];
 
+                for(auto &s: playerSessions) {
+                    auto it = s.second.begin();
+                    while (it != s.second.end()) {
+                        if (it->getNick() == p.getNick()) {
+                            it = s.second.erase(it);
+                        } else {
+                            ++it;
+                        }
+                    }
+                }
+                for(auto &fds: playerSessionsFds){
+                    std::vector<int> vec = fds.second;
+                    vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
+                }
             }
             else if( strcmp(msg, "DISCONNECTING\0") == 0){
                 removeFromEpoll(clientFd);
@@ -331,7 +340,6 @@ void clientValidation(int newClientFd){
 
 
 void joinSession(int clientFd){
-
     Player player = clientMap[clientFd];
     int sessionMode = -1;
     int finalSessionId = -1;
@@ -418,8 +426,7 @@ void sendSessionData(int clientSocket){
 }
 
 
-// TODO: DOROBIC START SESJI WGL!! w sensie ze write session start przez hosta uruchamia
-void sessionLoop(int sessionID) { //TODO: jak to rozwiązać
+void sessionLoop(int sessionID) {
 
     //TODO: obsluga proby dolaczenia do sesji w trakcie oblsuga wywalenia kogos z sesji,
     //TODO: za kazdym razem pobierz dane co z synchronizacja
@@ -464,13 +471,14 @@ void sessionLoop(int sessionID) { //TODO: jak to rozwiązać
 
         //Wyślij każdemu graczowi słowo.
         for(auto &p : currentPlayersFd){
-            char buf[50];
+            char buf[100];
             strcpy(buf, randomWord.c_str());
+            strcat(buf, "\0");
             writeData(p.second, buf, sizeof(buf));
         }
 
         auto start = std::chrono::steady_clock::now();     // start timer
-        double roundTime = 120.0; //2 minuty na rundę
+        double roundTime = 120.0 + 10.0; //2 minuty na rundę
         while(true){
             auto end = std::chrono::steady_clock::now();
             auto time_span = static_cast<std::chrono::duration<double>>(end - start);

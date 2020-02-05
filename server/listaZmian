@@ -51,7 +51,7 @@ To to:
                 playerSessions.insert(std::pair<int, std::vector<std::string>>(sessionID, players));
 
 
-6. Funkcja joinSession(): używany do odbioru i wysyłania bufor char[100].
+6. Funkcja joinSession(): używany do odbioru i wysyłania bufor char[100]. 
 Klient powinien obsługiwać taką sytuację, że jak 4 graczy w sesji na dany moemnt to od razu nie pozwala się połączyć bo bez sensu.
 Do tego jakaś zmienna bool'owska w kliencie ze jest w sesji i wtedy nie moze dolaczyc do nowej.
 Klient dołącza/tworzy sesje.
@@ -68,8 +68,23 @@ Potem join session operuje na buforze typu char[100] wysyłając odpowiedź.
 
 7. Funkcja sessionLoop():
 Tutaj powinno być tak, że jak stworzył sesję ktoś to KLIENT pamięta ze jest hostem i wtedy tylko host może wysłać sygnał
-"START-SESSION\0", który odpala sesję. Klient sprawdza czy jest min 2 graczy jak nie to nie startuje sesji. Jak juz wystartuje dostaje odpowiedz zwrotna: jak OK to dostaje "START-SESSION-OK\0", jak za mało graczy jednak to "START-SESSION-FAIL\0".
+"START-SESSION\0", który odpala sesję. Serwer sprawdzi w ktorej jest i ja odpali. Klient sprawdza czy jest min 2 graczy jak nie to nie startuje sesji. Jak juz wystartuje dostaje odpowiedz zwrotna: jak OK to dostaje "START-SESSION-OK\0", jak za mało graczy jednak to "START-SESSION-FAIL\0".
 
-działanie sesji jeszcze pisze i rozpykuje...
+-Następnie każdy klient czeka na wylosowane słowo. Jak na razie czas na każdą rundę taki sam więc nie ma sensu żeby serwer to wysyłał.
+ Po otrzymaniu słowa klient ma 2 minuty na odgadnięcie. Bufor char[100] na każde słowo. Po otrzymaniu słowa niech klient wylicza ile błędów    może popełnić:
+Taki wzorek stworzyłem.
+* int mistakesPerWord = 0;
+* mistakesPerWord = std::max((int)(randomWord.length()/3), 2); //Gdzie randomWord to wylosowane słowo otrzymane.
+* Bonus jak mierzyć czas
+        auto start = std::chrono::steady_clock::now(); 
+	//runda
+	end = std::chrono::steady_clock::now();
+        auto time_span = static_cast<std::chrono::duration<double>>(end - start);
+	double seconds = time_span.count();
+        
+-W tym czasie klient sprawdza poprawność tego co wpisuje gracz. Jak poprawnie i w czasie się miesci to musi wysłać wiadomość, która jest sekundami z tak 5 miejscami po przecinku. Czyli ile czasu zajęło buforem char[50]. Po niej serwer czeka z 3 sekundy na inne wiadomości.
+Na razie pieć rund więc 5 takich sekwencji.
+
+Muszę dorobić te wskaźniki punktów i dogrywkę...
 
 

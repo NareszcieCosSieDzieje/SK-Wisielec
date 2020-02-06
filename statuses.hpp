@@ -13,7 +13,8 @@
 #define EPOLL_ERROR 7
 #define EPOLL_CLOSE 8
 #define EPOLL_ADD 9
-#define EPOLL_WAIT 10
+#define EPOLL_REMOVE 10
+#define EPOLL_WAIT 11
 
 
 #endif //WISIELEC_STATUSES_HPP

@@ -1,6 +1,6 @@
 
-#ifndef SIECI_WISIELEC_USER_LOADER_HPP
-#define SIECI_WISIELEC_USER_LOADER_HPP
+#ifndef SIECI_WISIELEC_DATA_LOADER_HPP
+#define SIECI_WISIELEC_DATA_LOADER_HPP
 
 #include <string>
 #include <fstream>
@@ -16,8 +16,8 @@ inline bool isDelim(char c) {
     return false;
 }
 
-
-bool searchForUserData(std::string login, std::string password) {
+//DODAŁEM PARAMETR DO ROZROZNIENIA REJESTRACJI I LOGWOANIA
+bool searchForUserData(std::string login, std::string password, bool newAccount) {
 
     std::cout << "searchForData: "<< std::endl;
     std::cout << "Login: " << login << std::endl;
@@ -47,6 +47,9 @@ bool searchForUserData(std::string login, std::string password) {
                 if (i%2 == 0) {
                     if (login == word){
                         found++;
+                        if (newAccount == true){
+                            return false;
+                        }
                     }
                 } else {
                     if(password == word){
@@ -122,4 +125,4 @@ std::string getRandomWord(void){
 }
 
 
-#endif //SIECI_WISIELEC_USER_LOADER_HPP
+#endif //SIECI_WISIELEC_DATA_LOADER_HPP

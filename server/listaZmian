@@ -81,10 +81,31 @@ Taki wzorek stworzyłem.
 	end = std::chrono::steady_clock::now();
         auto time_span = static_cast<std::chrono::duration<double>>(end - start);
 	double seconds = time_span.count();
-        
--W tym czasie klient sprawdza poprawność tego co wpisuje gracz. Jak poprawnie i w czasie się miesci to musi wysłać wiadomość, która jest sekundami z tak 5 miejscami po przecinku. Czyli ile czasu zajęło buforem char[50]. Po niej serwer czeka z 3 sekundy na inne wiadomości.
-Na razie pieć rund więc 5 takich sekwencji.
 
-Muszę dorobić te wskaźniki punktów i dogrywkę...
+- Z każdą rundą serwer sprawdza ilość graczy. Jak poniżej 2 to sesja wysyła (jeśli jest 1) komunikat "SESSION-TIMEOUT\0" i na 10 sekund sesja śpi. Jeśli po 10 sekundach nie ma dalej 2 lub wiecej graczy to wiadomość do (jeśli jest 1) "SESSION-KILL\0"  i wtedy sesja usuwana i koniec jej.   
+- Z początkiem każdej rundy wiadomość "ROUND-START\0";
+- Losowane słowo i sprawdzane czy było już użyte, żeby były unikalne. Wysyłany bufor char buf[100] (ze słowem);
+- W tym czasie klient sprawdza poprawność tego co wpisuje gracz. Jak poprawnie i w czasie się miesci to musi wysłać wiadomość, która jest sekundami z tak kilkoma (do 5 ?) miejscami po przecinku. Czyli ile czasu zajęło buforem char[50]. Po niej serwer czeka z 3 sekundy na inne  wiadomości.
+- Na razie 4 rundy plus jedna mozliwa dogywka co da 5.
+- Bufor char[50] czeka na odpowiedź od klienta z jego czasem. Czas na turę to 120 sekund.
+- Wyłonienie zwycięzcy: 
+	* "WIN-0\0" nikt nie wygrał;
+	* "WIN-NICKNAME_UZYTKOWNIKA\0" - nazwa zwyciezcy rundy;
+- Przy czwartej rundzie sprawdzenie czy ktoś ma remis jak tak to 5 runda.
+- Na koniec wysłanie scoreBoard'a, który jest buforem char[1024], wysyła nie posortowane:
+	* "NICK_GRACZA:punkty\n" i tak dalej, czyli graczy oddziela '\n';
+		przykład wiadomości: "JANEKbangladeszKOMANDO:2\n"
+- Sesja kończy się wyrzucenie z niej graczy.
+
+
+
+
+* DO DOROBIENIA:  -------------------------------------------------IMPORANTE MUCHACHO---------------
+- POPRAWNE ZAMYKANIE SERWERA!; na razie nie jest bo musze dorobic ze:
+- ładnie się zamknie watek nasluchiwania;
+- gowny watek wyjdzie z epolla;
+- poboczne watki jesli sa to wyjebac;
+- dac sygnal klientom ze koniec???? TUTAJ KLIENT MUSIALBY MIEC SPRAWDZANIE ZE JAK readData na sockecie da zero to koniec połączenia
+- SESSION LOOP ODBIERANIE PORGRESU PRZESYŁANIE;
 
 

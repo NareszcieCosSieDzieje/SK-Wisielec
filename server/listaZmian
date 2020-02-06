@@ -71,7 +71,7 @@ Tutaj powinno być tak, że jak stworzył sesję ktoś to KLIENT pamięta ze jes
 "START-SESSION\0", który odpala sesję. Serwer sprawdzi w ktorej jest i ja odpali. Klient sprawdza czy jest min 2 graczy jak nie to nie startuje sesji. Jak juz wystartuje dostaje odpowiedz zwrotna: jak OK to dostaje "START-SESSION-OK\0", jak za mało graczy jednak to "START-SESSION-FAIL\0".
 
 -Następnie każdy klient czeka na wylosowane słowo. Jak na razie czas na każdą rundę taki sam więc nie ma sensu żeby serwer to wysyłał.
- Po otrzymaniu słowa klient ma 2 minuty na odgadnięcie. Bufor char[100] na każde słowo. Po otrzymaniu słowa niech klient wylicza ile błędów    może popełnić:
+ Po otrzymaniu słowa klie0nt ma 2 minuty na odgadnięcie. Bufor char[100] na każde słowo. Po otrzymaniu słowa niech klient wylicza ile błędów    może popełnić:
 Taki wzorek stworzyłem.
 * int mistakesPerWord = 0;
 * mistakesPerWord = std::max((int)(randomWord.length()/3), 2); //Gdzie randomWord to wylosowane słowo otrzymane.

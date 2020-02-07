@@ -12,6 +12,7 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
+#include <atomic>
 
 #include "../statuses.hpp"
 #include "../player.hpp"
@@ -44,6 +45,7 @@ int maxSessions = 2; //TODO: ile sesji?
 int playersPerSession = 4;
 const int maxEvents = maxSessions * playersPerSession;
 
+std::atomic<bool> SERVER_SHUT_DOWN(false);
 
 //========================================FUNC PROTO========================================\\
 
@@ -88,9 +90,8 @@ int main(int argc, char* argv[]){
 
     bool polling = true;
 
-    while(polling) {
+    while(polling && !SERVER_SHUT_DOWN) {
 
-        //FIXME: ========================= PROBLEM ZE JAK WYWALAM Z EPOLLA I DO FUNKCJI DAJE TO WTEDY NIE WIEM CZY KTOS ZERWAL POLACZENIE LIPKA =====================<
 
         int event_count = epoll_wait(epollFd, events, maxEvents, -1);
         printf("Ready events: %d\n", event_count);
@@ -182,7 +183,7 @@ int main(int argc, char* argv[]){
                 removeFromEpoll(clientFd);
                 stopConnection(clientFd);
             }
-            else if ( strcmp(msg,"LOG-OUT\0") == 0){ //FIXME: JAKI KOMUNIKAT
+            else if ( strcmp(msg,"LOG-OUT\0") == 0){
                 removeFromEpoll(clientFd);
 
                 Player p = clientMap[clientFd];
@@ -220,7 +221,6 @@ int main(int argc, char* argv[]){
     }
 
 
-            //TODO: gdzieś indziej! ALE OGARNIJ CZEKANIE NA WĄTKI
     while (!threadVector[0].joinable()){
 
     }
@@ -273,8 +273,12 @@ void listenLoop(void){
         }
         int newClient = accept(serverFd, (struct sockaddr *)&clientAddr, &cliLen); //Nawiąż nowe połączenie z klientem.
         if (newClient < 0) {
-            perror("Server ERROR on accept.\n");
-            exit(SOCKET_ACCEPT);
+           if (errno == EINVAL && SERVER_SHUT_DOWN) {
+               return;
+           } else {
+               perror("Server ERROR on accept.\n");
+               exit(SOCKET_ACCEPT);
+           }
         }
         addToEpoll(newClient);
         //std::thread validationThread(clientValidation, newClient); //Nowe połączenie przeslij do zweryfikowania
@@ -746,12 +750,20 @@ void stopConnection(int ClientFd){
 }
 
 
-void sigHandler(int signal){ //TODO: HANDLE ZAMKNIECIE
+
+//TODO: HANDLE ZAMKNIECIE
+void sigHandler(int signal){
     printf("CTRL + C\n");
-    if (threadVector[0].joinable()) {
+
+    shutdown(serverFd, SHUT_RDWR);
+    close(serverFd);
+    SERVER_SHUT_DOWN = true;
+
+    if (threadVector[0].joinable()) { //SPRAWDZ JOINOWANIE
         threadVector[0].join();
     }
-    //TODO: closeServer();
+
+
 }
 
 

@@ -14,10 +14,10 @@
 #include <algorithm>
 #include <atomic>
 
-#include "../statuses.hpp"
-#include "../player.hpp"
-#include "../player.cpp"
-#include "../data_loader.hpp"
+#include "statuses.hpp"
+#include "player.hpp"
+#include "player.cpp"
+#include "data_loader.hpp"
 
 
 //=====================================GLOBALS============================================\\
@@ -96,6 +96,12 @@ int main(int argc, char* argv[]){
         int event_count = epoll_wait(epollFd, events, maxEvents, -1);
         printf("Ready events: %d\n", event_count);
         for (int i = 0; i < event_count; i++) {
+            
+        	if (event_count < 0){
+        		perror("Epoll events < 0\n");
+        		break;
+        	}
+
             struct epoll_event clientEvent = events[i];
             int clientFd = clientEvent.data.fd;
             printf("Czytanie z klienta o deskryptorze: '%d' -- \n", clientFd);
@@ -221,11 +227,11 @@ int main(int argc, char* argv[]){
     }
 
 
-    while (!threadVector[0].joinable()){
+    /*while (!threadVector[0].joinable()){
 
     }
     threadVector[0].join();
-
+	*/
 
     return 0;
 }

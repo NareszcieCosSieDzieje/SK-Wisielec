@@ -14,10 +14,10 @@
 #include <algorithm>
 #include <atomic>
 
-#include "statuses.hpp"
-#include "player.hpp"
-#include "player.cpp"
-#include "data_loader.hpp"
+#include "../statuses.hpp"
+#include "../player.hpp"
+#include "../player.cpp"
+#include "../data_loader.hpp"
 
 
 //=====================================GLOBALS============================================\\

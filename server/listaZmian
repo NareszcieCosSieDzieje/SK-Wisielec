@@ -101,11 +101,10 @@ Taki wzorek stworzyłem.
 
 
 * DO DOROBIENIA:  -------------------------------------------------IMPORANTE MUCHACHO---------------
-- POPRAWNE ZAMYKANIE SERWERA!; na razie nie jest bo musze dorobic ze:
-- ładnie się zamknie watek nasluchiwania;
-- gowny watek wyjdzie z epolla;
 - poboczne watki jesli sa to wyjebac;
 - dac sygnal klientom ze koniec???? TUTAJ KLIENT MUSIALBY MIEC SPRAWDZANIE ZE JAK readData na sockecie da zero to koniec połączenia
 - SESSION LOOP ODBIERANIE PORGRESU PRZESYŁANIE;
+
+
 
 

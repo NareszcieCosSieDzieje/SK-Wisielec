@@ -1,0 +1,88 @@
+ZMIANY!
+
+joinSession()
+	
+	* JEŚLI KLIENT TWORZY NOWĄ SESJĘ TO PO ID SESJI WYSYŁA DODATKWO NAZWĘ SESJI! bufor danych to 100 do nazwy;
+
+KOD DO TEGO FRAGMENTU	
+->     else if (sessionMode == 0){ 
+		
+	    ret = readData(clientFd, buf, sizeof(buf)); 
+	    if(ret != 100){
+	        perror("Join session read error 2.\n");
+	        return;
+	    }	
+
+
+sendSessionData()  bufor do wysyłania to 2048
+	
+	* spora zmiana, nie robie tego na wektorze stringow zeby przesylac staly rozmair char[2048]!!!!!!
+	* 	liczba_sesji:id-nazwa-host;id-nazwa-host; itd...
+
+	void sendSessionData(int clientSocket){ 
+		char data[2048]; //is it enough			
+		memset(data, 0, sizeof(data));
+	    if (playerSessions.size() > 0){
+	  		char num[10];
+		sprintf (num, "%d", playerSessions.size());
+		strcpy(data, num);
+	      	strcat(data, ":");
+	    }
+	    for( auto const& [key, val] : playerSessions) {
+		int sessionID = key;
+		char num[10];
+		sprintf (num, "%d", key);
+		strcat(data, num);
+		strcat(data, "-");
+		strcat(data, sessionNames[sessionID].c_str()); // nazwa sesji
+		strcat(data, "-");
+		strcat(data, sessionHosts[sessionID].c_str()); //NICK HOSTA
+		strcat(data, ";");
+	    }
+	    strcat(data, "\0");
+	    write(clientSocket, data, sizeof(data));
+	}
+
+
+
+NOWA FUNKCJA ! do danych dla konkretnej sesji: 
+
+klient wysyła "SEND-USER-DATA-ID_SESJI\0"
+
+wywyłanie w serwerze:
+------------------------------------------------------->
+
+   } else if ( strncmp(msg, "SEND-USER-DATA", 17) == 0){ //ja obczajam zgodnosc czesci komuniaktu!
+				sendUserData(clientFd, msg);
+    }
+
+definicja: bufor do wysyłania 512
+---------------------------------------------->
+void sendUserData(int clientSocket, char* msg){
+	char data[512]; 	
+	memset(data, 0, sizeof(data));
+    char * pch;
+    pch = strtok(msg, "-");
+    if(pch != nullptr ){
+        pch = strtok(nullptr, "-");
+    }
+    if(pch != nullptr ){
+       //convert to int
+    }
+    std::stringstream strValue;
+	strValue << pch;
+	int sID;
+    strValue >> sID;
+	std::vector<Player> players = playerSessions[sID];
+	if (players.size() > 0 ){
+	    char num[10];
+	    sprintf (num, "%d", players.size());
+	    strcpy(data, num);
+	    strcat(data,":");
+	    for (auto & element : players) {
+	        strcat(data, element.getNick() );
+	        strcat(data, ",");
+	    }
+	}
+	write(clientSocket, data, sizeof(data));
+}

@@ -475,8 +475,10 @@ void sendUserData(int clientSocket, char* msg){
     pch = strtok(msg, "-");
     std::stringstream strValue;
 	int sID;
-    if(pch != nullptr ){
-        pch = strtok(nullptr, "-");
+    for (int hcp = 0; hcp < 2; hcp ++){
+   		if(pch != nullptr ){
+        	pch = strtok(nullptr, "-");
+   		}
     }
     if(pch != nullptr ){
     	strValue << pch;

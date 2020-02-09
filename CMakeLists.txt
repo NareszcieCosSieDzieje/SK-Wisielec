@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(Wisielec LANGUAGES CXX)
+project(SK-WISIELEC LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -29,26 +29,26 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 find_package(Qt5 COMPONENTS Widgets Sql REQUIRED)
 
 if(ANDROID)
-  add_library(Wisielec SHARED
+  add_library(SK-WISIELEC SHARED
     main.cpp
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
   )
 else()
-  add_executable(Wisielec
+  add_executable(SK-WISIELEC
     main.cpp
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
-    constants.h
     resources.qrc
     player.cpp
     player.hpp
     statuses.hpp
     client.cpp
     client.h
+    constants.h
   )
 endif()
 
-target_link_libraries(Wisielec PRIVATE Qt5::Widgets Qt5::Sql)
+target_link_libraries(SK-WISIELEC PRIVATE Qt5::Widgets Qt5::Sql)

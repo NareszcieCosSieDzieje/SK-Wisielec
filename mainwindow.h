@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <client.h>
+#include <QStandardItem>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -19,6 +20,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(Client *cl, QWidget *parent = nullptr);
     ~MainWindow();
+    void setSessions(std::map<int, std::vector<std::string>> sessions);
 
 private slots:
     void on_pushButtonRegister_clicked();
@@ -37,6 +39,10 @@ private slots:
 
     void letterClicked();
 
+    void on_pushButtonBackToSessions_clicked();
+
+    void on_pushButtonBackToLogin_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -46,6 +52,8 @@ private:
 
     int badAnswers;
 
+    QStandardItemModel *sessionsListModel;
+
     string generateWord();
 
     void lettersSetEnabled(bool isEnabled);
@@ -53,5 +61,10 @@ private:
     void setHangmanPicture(int badAnswers);
 
     char *QStringToChar(QString qs);
+
+    void moveToSessionsPage();
+
+    void moveToSessionPage();
 };
+
 #endif // MAINWINDOW_H

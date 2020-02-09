@@ -1,21 +1,38 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#include <string>
-#include <iostream>
+enum AuthorizationStatus {
+    SUCCESSFUL,
+    FAILED,
+    ERROR
+};
 
-using namespace std;
+enum AuthorizationType {
+    SIGNIN = 1,
+    SIGNUP = 2
+};
 
-class Constants
-{
+enum ServerDataType {
+    SESSIONS,
+    PLAYERS
+};
+
+class ConnectionProcesses {
 public:
+    static inline const char* VALIDATION = "CLIENT-VALIDATION\0";
+    static inline const char* SESSION_DATA = "SEND-SESSION-DATA\0";
+    static inline const char* SESSION_JOIN = "JOIN-SESSION\0";
+    static inline const char* SESSION_OUT = "DISSOCIATE-SESSION\0";
+    static inline const char* DISCONNECT = "DISCONNECTING\0";
+    static inline const char* LOGOUT = "LOG-OUT\0";
+};
 
-    static inline const string STYLE_BUTTON = "background-color: rgb(68, 10, 10);\ncolor: rgb(243, 243, 243)";
-    static const inline string STYLE_BUTTON_DISABLED = "background-color: rgb(30, 4, 4); color: rgb(140, 140, 140)";
-
-    static inline const int LOGIN_SUCCESSFUL = 1;
-    static inline const int LOGIN_FAILED = 0;
-    static inline const int LOGIN_ERROR = -1;
+enum SessionMessage {
+    CREATED,
+    JOINED,
+    MAX,
+    BUSY,
+    KILLED
 };
 
 #endif // CONSTANTS_H

@@ -13,9 +13,14 @@
 #include <vector>
 #include <errno.h>
 #include <iostream>
+#include <thread>
+#include <QMainWindow>
 
 #include "statuses.hpp"
 #include "player.hpp"
+#include "constants.h"
+
+class MainWindow;
 
 class Client
 {
@@ -34,9 +39,13 @@ public:
             .ai_protocol = IPPROTO_TCP};
     addrinfo *resolved;
     int joinedSessionID{};
-    char *login;
-    char *password;
+    std::string login;
+    std::string password;
     bool connected = true;
+    bool gettingData = false;
+    std::thread* dataGetterThread;
+    std::map<int, std::vector<std::string>> availableSessions;
+    MainWindow *GUI;
 
 
     Client();
@@ -47,7 +56,14 @@ public:
     ssize_t readData(int fd, char * buffer, ssize_t buffsize);
     void writeData(int fd, char * buffer, ssize_t count);
     void sigHandler(int signal);
-    int tryToLogin(char *log, char *pass);
+    int authorize(char *log, char *pass, int authKind);
+    void activateConnectionProcess(const char *proccesName);
+    void runDataGetter();
+    void joinSession(int id);
+    int createSession();
+private:
+    void dataGetter();
+    int goToSession(int id);
 };
 
 #endif // CLIENT_H

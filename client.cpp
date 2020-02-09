@@ -12,11 +12,14 @@
 #include <errno.h>
 #include <iostream>
 #include <thread>
+#include <QMetaObject>
+#include <qobjectdefs.h>
 
 #include "statuses.hpp"
 #include "player.hpp"
 #include "client.h"
 #include "constants.h"
+#include "mainwindow.h"
 
 Client::Client()
 {
@@ -24,133 +27,27 @@ Client::Client()
 }
 
 void Client::init(){
-
-    // Tu się coś wypierdala srogo, na razie to zostawiam
-//    signal(SIGINT, sigHandler);
-//    signal(SIGTSTP, sigHandler);
-
     bindAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-
     startClient();
     startConnection();
-
     while (connected) {
         sleep(0.5);
     }
+    std::cout << "Out of main loop" << std::endl;
     closeClient();
     return;
+}
 
-      // == KONIEC INIT'A ========= // ----------------------------------------------------------------------------------------------------
-     // == to poniżej to są ====== // ----------------------------------------------------------------------------------------------------
-    // ==== robocze kody ======== // ----------------------------------------------------------------------------------------------------
-
-    int petla = 0;
-    bool connectionValidated = false;
-    while(!connectionValidated) {
-
-        petla++;
-        //sleep(1);
-        if (petla < 2) {
-            std::cout << "Connection no: " << petla << std::endl;
-            startConnection();
-        }
-        //get nick i hasło
-        char msg[100];
-        strcpy(msg, login);
-        strcat(msg, "-");
-        strcat(msg, password); //Konkatenacja log haslo
-//        std::cout << "Write no: " << petla << std::endl;
-        writeData(clientFd, msg, sizeof(msg)); //wyslij dane użytkownika
-        memset(msg, 0, sizeof(msg)); //odczytaj czy autoryzacja się powiodła
-//        std::cout << "Read no: " << petla << std::endl;
-        auto x = readData(clientFd, msg, sizeof(msg));
-        //Jeśli nie powiodła się autoryzacja spróbuj połączyć sie od nowa.
-        if (strncmp(msg, "AUTH-FAIL", 9) == 0) {
-            printf("Log in failed! Try again.\n");
-        } else if (strncmp(msg, "AUTH-OK", 7) == 0) {
-            std::cout << "LOGIN SUCCESSFUL!!!" << std::endl;
-            connectionValidated = true;
-        }
-    }
-    //TODO: POŁĄCZ SIE Z DANĄ SESJA
-    std::map<int, std::vector<std::string>> playerSessions;
-    std::vector<std::string> players;
-
-    close(clientFd);
-    while (true) {sleep(1);}
-    return;
-
-    bool joinedSession = false;
-    while(!joinedSession){
-
-
-        //TODO: w jakiej pętli ma działać poniższy kod i odczytywanie/wybór sesji
-
-        char msg[1024];
-        readData(clientFd, msg, sizeof(msg));
-        //sprawdz czy pusty??
-        if(msg[0] == '\0'){
-            printf("No sessions available.\n");
-        }
-        else {
-            printf("Sessions found.\n");
-            playerSessions.clear();
-            players.clear();
-            char* s;
-            s = strtok(msg,":"); // TODO: jak nie zadziała to daj ze delimiter ma wsystkie znaki
-            if (s == nullptr){ //TODO: czy to sprawdzać wogóle
-                //error;
-                printf("strtok error.\n");
-            }
-            long int numSessions = strtol(s, nullptr, 10);
-            for( int i =0; i < numSessions; i++ ) {
-                s = strtok(msg, "-");
-                long int sessionID = strtol(s, nullptr, 10);
-                s = strtok(msg, ",");
-                long int numPlayers = strtol(s, nullptr, 10);
-                for (int j = 0; j < numPlayers; j++) {
-                    s = strtok(msg, ",;");
-                    players.push_back(std::string(s));
-                }
-                playerSessions.insert(std::pair<int, std::vector<std::string>>(sessionID, players));
-            }
-        }
-
-
-        //TODO:
-        // DWIE OPCJE STWORZ I DOŁĄCZ
-        // przetwórz i wyświetl dane sesji roznych one maja ID
-        // na podstawie tego co klikniesz daj znac ktora wybierasz
-        // wyslij ID SESJI do ktorej chcesz dołączyć
-        // czekaj na odpowiedz do ktorej sesji dołaczyłes, i czy, jesli sukces to break
-        joinedSessionID = 1;
-        joinedSession = true;
-    }
-
-    //TODO:JAK OK TO WJEDZ W PETLE GRY
-
-    while(true){
-
-
-            //send jesli nie wyslal ile mial to od nopwa
-            //read clientFd
-            //write serverFd
-       break;
-    }
-
-    closeClient();
-
-    exit(0);
+void Client::activateConnectionProcess(const char* proccesName) {
+    char msg[512];
+    strcpy(msg, proccesName);
+    writeData(clientFd, msg, sizeof(msg));
 }
 
 void Client::startClient(void){
     if((clientFd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
         perror("Failed to create socket.\n");
         exit(SOCKET_CREATE);
-    }
-    if( bind(clientFd, (sockaddr*)&bindAddr, sizeof(bindAddr)) < 0 ){
-        perror("Failed to bind the socket.\n");
-        exit(SOCKET_BIND);
     }
 }
 
@@ -159,26 +56,19 @@ void Client::closeClient(void){
     close(clientFd);
 }
 
-
-void Client::startConnection(void){ //TODO: MOZE POLACZ ZE STARETEM ALE ZOBACZYMY
+void Client::startConnection(void){
     int err = getaddrinfo("127.0.0.1", "55555", &hints, &resolved);
     if (err || !resolved){
         perror("Resolving address failed!\n");
         exit(GETADDRINFO_ERROR);
     }
     if ( connect(clientFd, resolved->ai_addr, resolved->ai_addrlen) < 0){
-        printf("TU\n");
         perror("Failed to connect.\n");
         exit(SOCKET_CONNECT);
     }
     freeaddrinfo(resolved);
+    activateConnectionProcess(ConnectionProcesses::VALIDATION);
 }
-
-
-void Client::sigHandler(int signal){
-    closeClient();
-}
-
 
 ssize_t Client::readData(int fd, char * buffer, ssize_t buffsize){
     auto ret = read(fd, buffer, buffsize);
@@ -197,21 +87,96 @@ void Client::writeData(int fd, char * buffer, ssize_t count){
     if(ret!=count) perror("Send less than requested to server\n");
 }
 
-int Client::tryToLogin(char *log, char *pass) {
-    char msg[100];
-    strcpy(msg, log);
-    strcat(msg, "-");
-    strcat(msg, pass);
-    writeData(clientFd, msg, sizeof(msg));
-    memset(msg, 0, sizeof(msg));
-    auto x = readData(clientFd, msg, sizeof(msg));
-    if (strncmp(msg, "AUTH-FAIL", 9) == 0) {
-        return Constants::LOGIN_FAILED;
-    } else if (strncmp(msg, "AUTH-OK", 7) == 0) {
-        return Constants::LOGIN_SUCCESSFUL;
+int Client::authorize(char *log, char *pass, int authKind) {
+    char msg1[10];
+    snprintf(msg1, sizeof(msg1), "%d", authKind);
+    writeData(clientFd, msg1, sizeof(msg1));
+    char msg2[100];
+    strcpy(msg2, log);
+    strcat(msg2, "-");
+    strcat(msg2, pass);
+    writeData(clientFd, msg2, sizeof(msg2));
+    memset(msg2, 0, sizeof(msg2));
+    readData(clientFd, msg2, sizeof(msg2));
+    if (strncmp(msg2, "AUTH-FAIL", 9) == 0) {
+        return AuthorizationStatus::FAILED;
+    } else if (strncmp(msg2, "AUTH-OK", 7) == 0) {
+        login = log;
+        password = pass;
+        return AuthorizationStatus::SUCCESSFUL;
     } else {
-        return Constants::LOGIN_ERROR;
+        return AuthorizationStatus::ERROR;
     }
+}
+
+void Client::dataGetter() {
+    std::cout << std::to_string(gettingData) << std::endl;
+    while (gettingData) {
+        activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
+        char msg[1024];
+        readData(clientFd, msg, sizeof(msg));
+        std::map<int, std::vector<std::string>> sessions;
+        if(msg[0] == '\0'){
+            std::cout << "no sessions" << std::endl;
+        }
+        else {
+            char* s;
+            s = strtok(msg,":");
+            long int numSessions = strtol(s, nullptr, 10);
+            for( int i =0; i < numSessions; i++ ) {
+                s = strtok(msg, "-");
+                int sessionID = strtol(s, nullptr, 10);
+                s = strtok(msg, ",");
+                int numPlayers = strtol(s, nullptr, 10);
+                std::vector<std::string> players;
+                for (int j = 0; j < numPlayers; j++) {
+                    s = strtok(msg, ",;");
+                    players.push_back(std::string(s));
+                }
+                sessions.insert(std::pair<int, std::vector<std::string>>(sessionID, players));
+            }
+        }
+        GUI->setSessions(sessions);
+        std::this_thread::sleep_for(std::chrono::seconds(3));
+    }
+}
+
+void Client::runDataGetter() {
+    gettingData = true;
+    std::thread getterThread(&Client::dataGetter, this);
+    getterThread.detach();
+    dataGetterThread = &getterThread;
+}
+
+int Client::goToSession(int id) {
+    activateConnectionProcess(ConnectionProcesses::SESSION_JOIN);
+    char msg1[20];
+    snprintf(msg1, sizeof(msg1), "%d", id);
+    writeData(clientFd, msg1, sizeof(msg1));
+    char msg2[100];
+    readData(clientFd, msg2, sizeof(msg2));
+    if (strncmp(msg2, "SESSION-MAX\0", 9) == 0) {
+
+    } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) {
+
+    } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) {
+
+    } else if (strcmp(msg2, "SESSION-KILLED\0") == 0) {
+
+    } else {
+        gettingData = false;
+        int i = 1;
+        while (true) {
+            std::cout << i << ": " << std::to_string(dataGetterThread->joinable()) << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            i++;
+        }
+        return SessionMessage::CREATED;
+    }
+}
+
+int Client::createSession() {
+    return goToSession(0);
 }
 
 /*

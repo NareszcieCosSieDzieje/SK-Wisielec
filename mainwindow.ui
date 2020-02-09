@@ -231,8 +231,27 @@ font-weight: 500</string>
        <string>Confirm password</string>
       </property>
      </widget>
+     <widget class="QPushButton" name="pushButtonBackToLogin">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>530</y>
+        <width>131</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(68, 10, 10);
+color: rgb(243, 243, 243);
+font-weight: 500
+</string>
+      </property>
+      <property name="text">
+       <string>Back</string>
+      </property>
+     </widget>
     </widget>
-    <widget class="QWidget" name="pageServers">
+    <widget class="QWidget" name="pageSessions">
      <widget class="QTableView" name="tableOfServers">
       <property name="geometry">
        <rect>
@@ -342,6 +361,25 @@ font-weight: 500
       </property>
       <property name="text">
        <string>Create server</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonBackToSessions">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>530</y>
+        <width>131</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(68, 10, 10);
+color: rgb(243, 243, 243);
+font-weight: 500
+</string>
+      </property>
+      <property name="text">
+       <string>Back</string>
       </property>
      </widget>
     </widget>

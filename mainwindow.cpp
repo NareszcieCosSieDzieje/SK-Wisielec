@@ -24,6 +24,21 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::setSessions(std::map<int, std::vector<string> > sessions)
+{
+    QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
+    int i = 0;
+    for( auto const& [key, val] : sessions) {
+        std::cout << "i: " << i << std::endl;
+        int sessionID = key;
+        model->setItem(i, 0, new QStandardItem(QString::fromStdString(std::to_string(sessionID))));
+        std::vector<string> players = val;
+        model->setItem(i, 1, new QStandardItem(QString::fromStdString(players.at(0))));
+        i++;
+    }
+    model->setItem(0, 0, new QStandardItem("Kupa"));
+}
+
 char *MainWindow::QStringToChar(QString qs) {
     const char *c = qs.toStdString().c_str();
     return strdup(c);
@@ -39,28 +54,17 @@ void MainWindow::on_pushButtonLogin_clicked()
     char *login = QStringToChar(ui->lineEditLogin->text());
     char *password = QStringToChar(ui->lineEditPwd->text());
     QMessageBox msgBox;
-    switch (client->tryToLogin(login, password)) {
-    case Constants::LOGIN_SUCCESSFUL: {
-        QStandardItemModel *model =  new QStandardItemModel(0, 1);
-        model->setHorizontalHeaderItem(0, new QStandardItem("Server name"));
-        model->setHorizontalHeaderItem(1, new QStandardItem("Host"));
-        model->setItem(0,0,new QStandardItem("Some server name"));
-        model->setItem(0,1,new QStandardItem("Test host"));
-        ui->tableOfServers->setModel(model);
-        ui->tableOfServers->horizontalHeader()->resizeSection(0, 400);
-        ui->tableOfServers->horizontalHeader()->setStretchLastSection(true);
-        ui->tableOfServers->setSelectionBehavior(QAbstractItemView::SelectRows);
-        ui->tableOfServers->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        ui->tableOfServers->verticalHeader()->hide();
-        ui->pages->setCurrentWidget(ui->pageServers);
+    switch (client->authorize(login, password, AuthorizationType::SIGNIN)) {
+    case AuthorizationStatus::SUCCESSFUL: {
+        moveToSessionsPage();
         break;
     }
-    case Constants::LOGIN_FAILED: {
+    case AuthorizationStatus::FAILED: {
         msgBox.setText("Login failed! Bad username or password.");
         msgBox.exec();
         break;
     }
-    case Constants::LOGIN_ERROR: {
+    case AuthorizationStatus::ERROR: {
         msgBox.setText("Ow, something went wrong. Please try again later.");
         msgBox.exec();
         break;
@@ -78,10 +82,32 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
 void MainWindow::on_pushButtonSignup_clicked()
 {
     QMessageBox msgBox;
-    msgBox.setText("Account created successfully");
-    msgBox.exec();
-    ui->pages->setCurrentWidget(ui->pageLogin);
+    if (ui->lineEditRegPwd1->text() == ui->lineEditRegPwd2->text()) {
+        char *login = QStringToChar(ui->lineEditRegLogin->text());
+        char *password = QStringToChar(ui->lineEditRegPwd1->text());
+        QMessageBox msgBox;
+        switch (client->authorize(login, password, AuthorizationType::SIGNUP)) {
+        case AuthorizationStatus::SUCCESSFUL: {
+            moveToSessionsPage();
+            break;
+        }
+        case AuthorizationStatus::FAILED: {
+            msgBox.setText("User with that username already exists");
+            msgBox.exec();
+            break;
+        }
+        case AuthorizationStatus::ERROR: {
+            msgBox.setText("Ow, something went wrong. Please try again later.");
+            msgBox.exec();
+            break;
+        }
+        }
+    } else {
+        msgBox.setText("Password fields must contain the same value");
+        msgBox.exec();
+    }
 }
+
 void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 {
     ui->pages->setCurrentWidget(ui->pageCreateSrv);
@@ -89,23 +115,28 @@ void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
+    switch(client->createSession()) {
+    case SessionMessage::CREATED:
+        moveToSessionPage();
+        QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
+        model->setItem(0,0,new QStandardItem(QString::fromStdString(client->login)));
+        std::cout << client->login << std::endl;
+        model->setItem(0,1,new QStandardItem("Host"));
+        break;
+    }
+}
+
+void MainWindow::moveToSessionPage() {
     QStandardItemModel *model =  new QStandardItemModel(0, 1);
     model->setHorizontalHeaderItem(0, new QStandardItem("Player name"));
     model->setHorizontalHeaderItem(1, new QStandardItem("Role"));
-    model->setItem(0,0,new QStandardItem("Player"));
-    model->setItem(0,1,new QStandardItem("Host"));
-    model->setItem(1,0,new QStandardItem("Player"));
-    model->setItem(1,1,new QStandardItem("-"));
-
     ui->tableOfPlayers->setModel(model);
     ui->tableOfPlayers->horizontalHeader()->resizeSection(0, 220);
     ui->tableOfPlayers->horizontalHeader()->setStretchLastSection(true);
     ui->tableOfPlayers->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableOfPlayers->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableOfPlayers->verticalHeader()->hide();
-
     ui->labelSrvName->setText(ui->lineEditSrvName->text());
-
     ui->pages->setCurrentWidget(ui->pageWaitingRoom);
 }
 
@@ -204,18 +235,26 @@ string MainWindow::generateWord()
     return words[rand() % n].toStdString();
 }
 
+void MainWindow::moveToSessionsPage() {
+    ui->tableOfServers->horizontalHeader()->resizeSection(0, 400);
+    ui->tableOfServers->horizontalHeader()->setStretchLastSection(true);
+    ui->tableOfServers->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->tableOfServers->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableOfServers->verticalHeader()->hide();
+    ui->pages->setCurrentWidget(ui->pageSessions);
+    QStandardItemModel* model =  new QStandardItemModel(0, 1);
+    model->setHorizontalHeaderItem(0, new QStandardItem("Server name"));
+    model->setHorizontalHeaderItem(1, new QStandardItem("Host"));
+    ui->tableOfServers->setModel(model);
+    client->runDataGetter();
+}
 
+void MainWindow::on_pushButtonBackToSessions_clicked()
+{
+    moveToSessionsPage();
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+void MainWindow::on_pushButtonBackToLogin_clicked()
+{
+    ui->pages->setCurrentWidget(ui->pageLogin);
+}

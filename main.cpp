@@ -10,11 +10,11 @@ void initializeClient();
 
 int main(int argc, char *argv[])
 {
-    client = new Client;;
-    std::thread clientThread(initializeClient);
-
+    client = new Client;
     QApplication application(argc, argv);
     MainWindow w(client);
+    client->GUI = &w;
+    std::thread clientThread(initializeClient);
     int width = w.frameGeometry().width();
     int height = w.frameGeometry().height();
     QDesktopWidget wid;

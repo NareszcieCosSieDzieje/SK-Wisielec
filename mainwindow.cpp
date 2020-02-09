@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <QString>
 
 #include "constants.h"
 
@@ -24,22 +25,25 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::setSessions(std::map<int, std::vector<string> > sessions)
+void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 {
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     int i = 0;
     for( auto const& [key, val] : sessions) {
         int sessionID = key;
-        model->setItem(i, 0, new QStandardItem(QString::fromStdString(std::to_string(sessionID))));
-        std::vector<string> players = val;
-        model->setItem(i, 1, new QStandardItem(QString::fromStdString(players.at(0))));
+        string name = val.first;
+        string host = val.second;
+        model->setItem(i, 0, new QStandardItem(QString::fromStdString(name)));
+        model->setItem(i, 1, new QStandardItem(QString::fromStdString(host)));
         i++;
     }
 }
 
 void MainWindow::setPlayers(std::vector<string> players)
 {
+    std::cout << "przed" << std::endl;
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
+    std::cout << "po" << std::endl;
     int i = 0;
     for( std::string player : players) {
         model->setItem(i, 0, new QStandardItem(QString::fromStdString(player)));
@@ -50,6 +54,7 @@ void MainWindow::setPlayers(std::vector<string> players)
         }
         i++;
     }
+    std::cout << "po petli" << std::endl;
 }
 
 
@@ -129,6 +134,9 @@ void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
+    std::cout << "CREATING SERVER" << std::endl;
+    client->gettingData = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
     switch(client->createSession()) {
     case SessionMessage::CREATED:
         moveToSessionPage();
@@ -149,6 +157,7 @@ void MainWindow::moveToSessionPage() {
     ui->labelSrvName->setText(ui->lineEditSrvName->text());
     ui->pages->setCurrentWidget(ui->pageWaitingRoom);
     client->gettingDataType = GettingDataType::Players;
+    client->runDataGetter();
 }
 
 void MainWindow::lettersSetEnabled(bool isEnabled)
@@ -165,15 +174,19 @@ void MainWindow::lettersSetEnabled(bool isEnabled)
     }
 }
 
+string MainWindow::getSrvName() {
+    return ui->lineEditSrvName->text().toStdString();
+}
+
 void MainWindow::setHangmanPicture(int badAnswers)
-{{
+{
     string s = ":/resources/img/s";
     s.append(to_string(badAnswers));
     s.append(".jpg");
     QString qs = QString::fromStdString(s);
     QPixmap img(qs);
     ui->labelHangman->setPixmap(img.scaled(ui->labelHangman->width(), ui->labelHangman->height(), Qt::KeepAspectRatio));
-}}
+}
 
 void MainWindow::on_pushButtonStart_clicked()
 {

@@ -24,7 +24,7 @@ bool searchForUserData(std::string login, std::string password, bool newAccount)
     std::cout << "Haslo: " << password << std::endl;
 
     std::ifstream userFile;
-    userFile.open ("user_data.txt", std::ios::in);
+    userFile.open ("../user_data.txt", std::ios::in);
     if (userFile.is_open()) {
         //TODO: if empty error??
         std::string line;
@@ -81,7 +81,7 @@ bool searchForUserData(std::string login, std::string password, bool newAccount)
 
 void addUser(std::string user, std::string password){
     std::fstream userFile;
-    userFile.open("user_data.txt",  std::fstream::in | std::fstream::out | std::fstream::ate ); // append instead of overwrite
+    userFile.open("../user_data.txt",  std::fstream::in | std::fstream::out | std::fstream::ate ); // append instead of overwrite
     if (userFile.is_open()){
         long pos = userFile.tellp();
         userFile.seekp(pos-1);

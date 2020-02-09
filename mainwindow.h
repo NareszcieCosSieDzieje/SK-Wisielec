@@ -20,9 +20,10 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(Client *cl, QWidget *parent = nullptr);
     ~MainWindow();
-    void setSessions(std::map<int, std::vector<std::string>> sessions);
+    void setSessions(std::map<int, std::pair<string, string> > sessions);
     void setPlayers(std::vector<string> players);
 
+    string getSrvName();
 private slots:
     void on_pushButtonRegister_clicked();
 

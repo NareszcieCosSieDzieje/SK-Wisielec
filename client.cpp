@@ -22,6 +22,8 @@
 #include "constants.h"
 #include "mainwindow.h"
 
+class MainWindow;
+
 Client::Client()
 {
 
@@ -111,55 +113,54 @@ int Client::authorize(char *log, char *pass, int authKind) {
 }
 
 void Client::dataGetter() {
-    std::cout << std::to_string(gettingData) << std::endl;
     while (gettingData) {
         if (gettingDataType == GettingDataType::Sessions) {
             activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
-            char msg[1024];
+            char msg[2048];
             readData(clientFd, msg, sizeof(msg));
-            std::map<int, std::vector<std::string>> sessions;
+            std::map<int, std::pair<string, string>> sessions;
             if(msg[0] == '\0'){
                 std::cout << "no sessions" << std::endl;
             } else {
-                char* s;
+                char *s;
                 s = strtok(msg,":");
                 long int numSessions = strtol(s, nullptr, 10);
                 for( int i =0; i < numSessions; i++ ) {
-                    s = strtok(msg, "-");
-                    int sessionID = strtol(s, nullptr, 10);
-                    s = strtok(msg, ",");
-                    int numPlayers = strtol(s, nullptr, 10);
-                    std::vector<std::string> players;
-                    for (int j = 0; j < numPlayers; j++) {
-                        s = strtok(msg, ",;");
-                        players.push_back(std::string(s));
-                    }
-                    sessions.insert(std::pair<int, std::vector<std::string>>(sessionID, players));
+                    int sessionID = strtol(strtok(msg, "-"), nullptr, 10);
+                    string name = strtok(msg, "-");
+                    string host = strtok(msg, "-");
+                    sessions.insert(std::pair<int, std::pair<string, string>>(sessionID, std::pair<string, string> (name, host)));
                 }
             }
+            availableSessions = &sessions;
             GUI->setSessions(sessions);
         } else if (gettingDataType == GettingDataType::Players) {
             char userDataProcess[sizeof(ConnectionProcesses::USER_DATA)];
             strcpy(userDataProcess, ConnectionProcesses::USER_DATA);
-            const char *process = strcat(userDataProcess, "-1");
+            const char *process = strcat(userDataProcess, "-1"); //TODO: popraw
             activateConnectionProcess(process);
-            char msg[1024];
+            char msg[512];
             readData(clientFd, msg, sizeof(msg));
             std::vector<std::string> players;
-            if (strcmp(msg, "SESSION-KILLED\0") == 0){
+            if (strcmp(msg, "SESSION-QUIT\0") == 0){
                 std::cout << "sesja is dead" << std::endl;
             } else {
+                std::cout << msg << std::endl;
                 char* s;
                 s = strtok(msg,":");
+                std::cout << "2" << std::endl;
+                std::cout << 's' << s << std::endl;
                 long int numPlayers = strtol(s, nullptr, 10);
+                std::cout << "num = " << numPlayers << std::endl;
                 for( int i =0; i < numPlayers; i++ ) {
                     s = strtok(msg, ",");
+                    std::cout << "3" << std::endl;
                     players.push_back(std::string(s));
                 }
+                std::cout << "przeszlo" << std::endl;
                 GUI->setPlayers(players);
             }
         }
-
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 }
@@ -173,9 +174,16 @@ void Client::runDataGetter() {
 
 int Client::goToSession(int id) {
     activateConnectionProcess(ConnectionProcesses::SESSION_JOIN);
+    std::cout<< "joi session wyslane" << std::endl;
     char msg1[20];
     snprintf(msg1, sizeof(msg1), "%d", id);
     writeData(clientFd, msg1, sizeof(msg1));
+    if (id == 0) {
+        char msg3[100];
+        std::string s = GUI->getSrvName();
+        strcpy(msg3, s.c_str());
+        writeData(clientFd, msg3, sizeof(msg3));
+    }
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));
     if (strncmp(msg2, "SESSION-MAX\0", 9) == 0) {
@@ -186,9 +194,12 @@ int Client::goToSession(int id) {
 
     } else if (strcmp(msg2, "SESSION-KILLED\0") == 0) {
 
-    } else {
-        gettingData = false;
+    } else if (strcmp(msg2, "SESSION-GOOD\0") == 0) {
+        isHost = true;
         return SessionMessage::CREATED;
+    } else {
+        std::cout << "msg2: " << msg2 << std::endl;
+        std::cout << msg2 << std::endl;
     }
 }
 

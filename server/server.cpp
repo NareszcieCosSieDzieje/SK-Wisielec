@@ -13,12 +13,16 @@
 #include <set>
 #include <algorithm>
 #include <atomic>
+ #include <arpa/inet.h>
 
 #include "../statuses.hpp"
 #include "../player.hpp"
 #include "../player.cpp"
 #include "../data_loader.hpp"
 
+
+
+// std::terminate ????
 
 //=====================================GLOBALS============================================\\
 
@@ -32,12 +36,17 @@ std::map<int, std::vector<Player>> playerSessions;
 std::map<int, std::vector<int>> playerSessionsFds;
 std::mutex playerSessionsMutex;
 
+std::map<int, std::string> sessionHosts; // USUWANIE HOSTA !=========================================================
+std::map<int, std::string> sessionNames;
+
 int epollFd{};
 int serverFd{};
 const unsigned int localPort{55555};
 sockaddr_in bindAddr {
         .sin_family = AF_INET,
         .sin_port = htons(localPort),
+        // randomowy port?
+        //.sin_addr.s_addr = inet_addr("127.0.0.1");
         //.sin_addr = htonl(INADDR_ANY)
 };
 
@@ -59,10 +68,13 @@ void sendAvailableSessions(void);
 void stopConnection(int ClientFd);
 void clientValidation(int newClientFd);
 void sendSessionData(int clientSocket);
+void sendUserData(int clientSocket, char* msg);
 void sessionLoop(int sessionID);
 void joinSession(int clientFd);
 void addToEpoll(int fd);
 void removeFromEpoll(int fd);
+void handlePlayerExit(int clientFd);
+bool validateIpAddress(const std::string &ipAddress);
 std::string loadUserData(char* filePath); //TODO: zwróć array stringów
 
 
@@ -78,12 +90,21 @@ std::string loadUserData(char* filePath); //TODO: zwróć array stringów
 
 int main(int argc, char* argv[]){
 
+	if (argc > 1){ 
+		if (!validateIpAddress(argv[1])){
+			perror("Wrong ip address format!\n");
+			exit(WRONG_IP);
+		} else {
+			inet_pton(AF_INET, argv[1], &(bindAddr.sin_addr));
+		}
+	} else {
+    	bindAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	}
 
     signal(SIGINT, sigHandler);
     signal(SIGTSTP, sigHandler);
 
-    bindAddr.sin_addr.s_addr = htonl(INADDR_ANY); //TODO: ZMIEN NA ADRESOKRESLONY
-
+     
     startServer();
 
     struct epoll_event events[maxEvents];
@@ -107,7 +128,7 @@ int main(int argc, char* argv[]){
             printf("Czytanie z klienta o deskryptorze: '%d' -- \n", clientFd);
 
             char msg[512];
-            int ret = readData(clientFd, msg, sizeof(msg));//TODO: jakies stale ilosci danych zeby dzialalo jakies minim z maxow
+            int ret = readData(clientFd, msg, sizeof(msg));
 
             if(ret == 0){
                 polling = false;
@@ -120,8 +141,10 @@ int main(int argc, char* argv[]){
                 std::thread validationThread(clientValidation, clientFd); //Nowe połączenie przeslij do zweryfikowania
                 validationThread.detach();
             } else if (strcmp(msg, "SEND-SESSION-DATA\0") == 0) {
-                    sendSessionData(clientFd);
+                sendSessionData(clientFd);
                     //TODO: czy inny wątek na to
+            } else if ( strncmp(msg, "SEND-USER-DATA", 17) == 0){
+				sendUserData(clientFd, msg);
             }
             else if( strcmp(msg, "JOIN-SESSION\0") == 0){
                 removeFromEpoll(clientFd);
@@ -162,50 +185,19 @@ int main(int argc, char* argv[]){
                     write(clientFd, msg, sizeof(msg));
                 }
             } else if (strcmp(msg, "DISSOCIATE-SESSION\0") == 0) {
-
-                //TODO: TUTUAJ JAKIES OGARNIANIE KIEDY MOZNA GO WYRZUCIC---------------------------------------------------------------
-
-                Player p = clientMap[clientFd];
-
-                playerSessionsMutex.lock();
-                for(auto &s: playerSessions) {
-                    auto it = s.second.begin();
-                    while (it != s.second.end()) {
-                        if (it->getNick() == p.getNick()) {
-                            it = s.second.erase(it);
-                        } else {
-                            ++it;
-                        }
-                    }
-                }
-                for(auto &fds: playerSessionsFds){
-                    std::vector<int> vec = fds.second;
-                   //
-                   vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
-                }
-                playerSessionsMutex.unlock();
+            	//Wyjdz przed startem sesji
+            	handlePlayerExit(clientFd);
             }
             else if( strcmp(msg, "DISCONNECTING\0") == 0){
+                
                 removeFromEpoll(clientFd);
+                handlePlayerExit(clientFd); //FIXME: nowe obczaj czy ok!
                 stopConnection(clientFd);
             }
             else if ( strcmp(msg,"LOG-OUT\0") == 0){
+
                 removeFromEpoll(clientFd);
-
-                Player p = clientMap[clientFd];
-                std::string nick = p.getNick();
-
-                playerSessionsMutex.lock();
-                for(auto &fds: playerSessionsFds){
-                    std::vector<int> vec = fds.second;
-                    vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
-                }
-                for(auto &pl: playerSessions){
-                    std::vector<Player> vec = pl.second;
-                    vec.erase( std::remove_if( vec.begin(), vec.end(), [nick](Player py){ return py.getNick() == nick;}), vec.end());
-                }
-                playerSessionsMutex.unlock();
-
+            	handlePlayerExit(clientFd);
                 clientMapMutex.lock();
                 clientMap.erase(clientFd);
                 clientMapMutex.unlock();
@@ -227,7 +219,8 @@ int main(int argc, char* argv[]){
     }
 
 
-    /*while (!threadVector[0].joinable()){
+    /*
+    while (!threadVector[0].joinable()){
 
     }
     threadVector[0].join();
@@ -239,6 +232,14 @@ int main(int argc, char* argv[]){
 
 //=======================================FUNC-DEC=========================================\\
 
+
+bool validateIpAddress(const std::string &ipAddress){
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, ipAddress.c_str(), &(sa.sin_addr));
+    return result == 1;
+}
+
+
 void startServer(void){
     if( (serverFd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
         perror("Server failed to create socket.\n");
@@ -247,7 +248,7 @@ void startServer(void){
     int enable = 1;
     if( setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0 ){
         perror("Setsockopt(SO_REUSEADDR) in server failed.\n");
-        exit(SOCKET_REEUSE);
+        exit(SOCKET_REUSE);
     }
     if( bind(serverFd, (sockaddr*)&bindAddr, sizeof(bindAddr)) < 0 ){
         perror("Server failed to bind the socket.\n");
@@ -371,9 +372,9 @@ void joinSession(int clientFd){
     char buf[100];
     char sessionId[20];
 
-    int ret = readData(clientFd, sessionId, sizeof(sessionId)); // int read = recv(clientFd, sessionId, sizeof(sessionId), MSG_DONTWAIT); //response non block get chosen session
+    int ret = readData(clientFd, sessionId, sizeof(sessionId)); // int read = recv(clientFd, sessionId, sizeof(sessionId), MSG_DONTWAIT); 
     if(ret != 20){
-        perror("Join session read error.\n");
+        perror("Join session read error 1.\n");
         return;
     }
     sessionMode = (int) strtol(sessionId, NULL, 10);
@@ -382,30 +383,38 @@ void joinSession(int clientFd){
         perror("Server join session error - sessionMode < 0\n");
     }
     else if (sessionMode == 0){ //TODO: Czy jak usuniete niskie wartosci to uzywanie od nowa? szczegol tho
-        std::vector<Player> playerVector;
-        std::vector<int> playerFds;
-        playerVector.push_back(player);
-        playerFds.push_back(clientFd);
-        if (playerSessions.empty()){
-            finalSessionId = 1;
+		
+	    ret = readData(clientFd, buf, sizeof(buf)); 
+	    if(ret != 100){
+	        perror("Join session read error 2.\n");
+	        return;
+	    }	
+        if (playerSessions.empty() || playerSessions.size() < maxSessions) {
+        	
+        	if (playerSessions.empty()){
+	            finalSessionId = 1;
+		        strcpy(buf, "SESSION-1\0");
+        	} 
+        	else if (playerSessions.size() < maxSessions )   {
+	            finalSessionId = (int)playerSessions.size() +1;
+		        char num[10];
+	            sprintf (num, "%d", finalSessionId);
+	            strcpy(buf, "SESSION-");
+	            strcat(buf, num);
+	            strcat(buf, "\0");
+	        }
+        	std::vector<Player> playerVector;
+	        std::vector<int> playerFds;
+	        playerVector.push_back(player);
+	        playerFds.push_back(clientFd);
             playerSessionsMutex.lock();
             playerSessions.insert(std::pair<int, std::vector<Player>>(finalSessionId, playerVector));
             playerSessionsFds.insert(std::pair<int, std::vector<int>>(finalSessionId, playerFds));
+            sessionHosts.insert(std::pair<int, std::string>(finalSessionId, player.getNick() ));
+            sessionNames.insert(std::pair<int, std::string>(finalSessionId, std::string(buf) )); 
             playerSessionsMutex.unlock();
-            strcpy(buf, "SESSION-1\0");
-        } else if (playerSessions.size() < maxSessions )   {
-            finalSessionId = (int)playerSessions.size() +1;
-            playerSessionsMutex.lock();
-            playerSessions.insert(std::pair<int, std::vector<Player>>(finalSessionId, playerVector));
-            playerSessionsFds.insert(std::pair<int, std::vector<int>>(finalSessionId, playerFds));
-            playerSessionsMutex.unlock();
-            char num[10];
-            sprintf (num, "%d", finalSessionId);
-            strcpy(buf, "SESSION-");
-            strcat(buf, num);
-            strcat(buf, "\0"); //czy potrzebne?
-        } else {
-            //error nie mozna zrobic sesji;
+            memset(buf, 0, sizeof(buf));
+		} else {            //error nie mozna zrobic sesji;
             strcpy(buf, "SESSION-MAX\0");
         }
         write(clientFd, buf, sizeof(buf));
@@ -433,29 +442,65 @@ void joinSession(int clientFd){
 }
 
 
-//TODO: JAKI BUFOR TUTUAJ JEST                TUTAJ daj JAKIES MUTEXY DO OCZYTU????!!
-void sendSessionData(int clientSocket){
-    std::string sessionData("");
+//    id-nazwa-host
+void sendSessionData(int clientSocket){ 
+	char data[2048]; //is it enough			
+	memset(data, 0, sizeof(data));
     if (playerSessions.size() > 0){
-        std::string sessionData(std::to_string(sessionData.size()));
-        sessionData.append(":");
+  		char num[10];
+        sprintf (num, "%d", playerSessions.size());
+        strcpy(data, num);
+      	strcat(data, ":");
     }
     for( auto const& [key, val] : playerSessions) {
         int sessionID = key;
-        sessionData.append(std::to_string(sessionID));
-        sessionData.append("-");
-        std::vector<Player> players = val;
-        sessionData.append(std::to_string(players.size()));
-        for (auto & element : players) {
-            sessionData.append(",");
-            sessionData.append(element.getNick());
-        }
-        sessionData.append(";");
-        //CZY WYSYLAC POJEDYNCZE INFO O SESJI CZY WLASNIE NA KONCY FUNCJI CALOSC?
+        char num[10];
+        sprintf (num, "%d", key);
+        strcat(data, num);
+        strcat(data, "-");
+        strcat(data, sessionNames[sessionID].c_str()); // nazwa sesji
+        strcat(data, "-");
+        strcat(data, sessionHosts[sessionID].c_str()); //NICK HOSTA
+        strcat(data, ";");
     }
-    std::vector<char> chars(sessionData.c_str(), sessionData.c_str() + sessionData.size() + 1u); //TODO zobacz czy dziala
-    writeData(clientSocket, &chars[0], sizeof(chars));
+    strcat(data, "\0");
+    write(clientSocket, data, sizeof(data));
 }
+
+
+void sendUserData(int clientSocket, char* msg){
+	char data[512]; 	
+	memset(data, 0, sizeof(data));
+	char * pch;
+    pch = strtok(msg, "-");
+    std::stringstream strValue;
+	int sID;
+    for (int hcp = 0; hcp < 2; hcp ++){
+   		if(pch != nullptr ){
+        	pch = strtok(nullptr, "-");
+   		}
+    }
+    if(pch != nullptr ){
+    	strValue << pch;
+		strValue >> sID; //convert to int
+    }
+	std::vector<Player> players = playerSessions[sID];
+    if (players.size() > 0 ){   
+	    char num[10];
+	    sprintf (num, "%d", players.size());
+	    strcpy(data, num);
+	    strcat(data,":");
+	    for (auto & element : players) {
+	        strcat(data, element.getNick() );
+	        strcat(data, ",");
+	    }
+	} else {
+		strcpy(data, "SESSION-KILLED\0"); //TODO: jezeli host wyjdzie to niech usunie ludzi i rozwiaze sesje
+	}
+	write(clientSocket, data, sizeof(data));
+}
+
+ 
 
 
 void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
@@ -467,7 +512,10 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     std::set<std::string> usedWords{};
     const unsigned int rounds = 5;
 
+    sessionHosts.erase(sessionID); // USUWANIE HOSTA PO STARCIE RUNDY!
+
     for (int i = 0; i < rounds; i++) {
+
 
         char startMsg[50];
         std::vector<Player> players = playerSessions[sessionID];
@@ -661,6 +709,8 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     }
     //Dodaj do epolla
 
+    sessionNames.erase(sessionID);
+
     playerSessions.erase(sessionID);
     playerSessionsFds.erase(sessionID);
     //Wyrzuć z sesji
@@ -712,37 +762,23 @@ void removeFromEpoll(int fd){
 //TODO: jakiś send że zrywamy połączenie?? to raczej w instacji danego problemu dac
 void stopConnection(int ClientFd){
 
+	/*
     Player p = clientMap[ClientFd];
     std::string nick = p.getNick();
 
     playerSessionsMutex.lock();
     for(auto &fds: playerSessionsFds){
         std::vector<int> vec = fds.second;
-        /*auto it = vec.begin();
-        while(it != vec.end()){
-            if( (*it) == ClientFd){
-                it = vec.erase(it);
-            }
-            else {
-                ++it;
-            }
-        }*/
+        
         vec.erase( std::remove_if( vec.begin(), vec.end(), [ClientFd](int i){ return i == ClientFd;}), vec.end());
     }
     for(auto &pl: playerSessions){
         std::vector<Player> vec = pl.second;
-       /* auto it = vec.begin();
-        while(it != vec.end()){
-            if( it->getNick() == nick){
-                it = vec.erase(it);
-            }
-            else {
-                ++it;
-            }
-        } */
+        
         vec.erase( std::remove_if( vec.begin(), vec.end(), [nick](Player py){ return py.getNick() == nick;}), vec.end());
     }
     playerSessionsMutex.unlock();
+    */
 
     clientMapMutex.lock();
     clientMap.erase(ClientFd);
@@ -790,9 +826,53 @@ ssize_t readData(int fd, char * buffer, ssize_t buffsize){
 
 void writeData(int fd, char * buffer, ssize_t count){
     auto ret = write(fd, buffer, count);
-    std::cout << "Read ret: " << ret << std::endl;
+    std::cout << "Write ret: " << ret << std::endl;
     if(ret==-1) perror("write failed on descriptor %d\n");
     if(ret!=count) perror("wrote less than requested to descriptor %d (%ld/%ld)\n");
+}
+
+
+void handlePlayerExit(int clientFd){
+	Player p = clientMap[clientFd];
+        int session = 0;
+        bool findEnd= false;
+        for (auto & fds: playerSessionsFds){
+      		session = fds.first;
+        	for (auto &f: fds.second){
+        		if(f == clientFd){
+        			findEnd=true;
+        			break;
+        		}
+        	}
+        	if (findEnd){
+        		break;
+        	}
+        }
+
+        playerSessionsMutex.lock();
+        
+        if (sessionHosts.count(session) != 1){ // jesli jest hostem sesji to usuń sesje
+        	sessionNames.erase(session);
+        	playerSessions.erase(session);
+        	playerSessionsFds.erase(session);
+        	sessionHosts.erase(session);
+        } else {                                //jesli to nie to wyrzuc z sesji
+            for(auto &s: playerSessions) {
+                auto it = s.second.begin();
+                while (it != s.second.end()) {
+                    if (it->getNick() == p.getNick()) {
+                        it = s.second.erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+            }
+            for(auto &fds: playerSessionsFds){
+                std::vector<int> vec = fds.second;
+               vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
+            }
+    	}
+    	playerSessionsMutex.unlock();
 }
 
 

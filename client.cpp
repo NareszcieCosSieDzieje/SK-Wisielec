@@ -14,6 +14,7 @@
 #include <thread>
 #include <QMetaObject>
 #include <qobjectdefs.h>
+#include <string.h>
 
 #include "statuses.hpp"
 #include "player.hpp"
@@ -112,32 +113,54 @@ int Client::authorize(char *log, char *pass, int authKind) {
 void Client::dataGetter() {
     std::cout << std::to_string(gettingData) << std::endl;
     while (gettingData) {
-        activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
-        char msg[1024];
-        readData(clientFd, msg, sizeof(msg));
-        std::map<int, std::vector<std::string>> sessions;
-        if(msg[0] == '\0'){
-            std::cout << "no sessions" << std::endl;
-        }
-        else {
-            char* s;
-            s = strtok(msg,":");
-            long int numSessions = strtol(s, nullptr, 10);
-            for( int i =0; i < numSessions; i++ ) {
-                s = strtok(msg, "-");
-                int sessionID = strtol(s, nullptr, 10);
-                s = strtok(msg, ",");
-                int numPlayers = strtol(s, nullptr, 10);
-                std::vector<std::string> players;
-                for (int j = 0; j < numPlayers; j++) {
-                    s = strtok(msg, ",;");
+        if (gettingDataType == GettingDataType::Sessions) {
+            activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
+            char msg[1024];
+            readData(clientFd, msg, sizeof(msg));
+            std::map<int, std::vector<std::string>> sessions;
+            if(msg[0] == '\0'){
+                std::cout << "no sessions" << std::endl;
+            } else {
+                char* s;
+                s = strtok(msg,":");
+                long int numSessions = strtol(s, nullptr, 10);
+                for( int i =0; i < numSessions; i++ ) {
+                    s = strtok(msg, "-");
+                    int sessionID = strtol(s, nullptr, 10);
+                    s = strtok(msg, ",");
+                    int numPlayers = strtol(s, nullptr, 10);
+                    std::vector<std::string> players;
+                    for (int j = 0; j < numPlayers; j++) {
+                        s = strtok(msg, ",;");
+                        players.push_back(std::string(s));
+                    }
+                    sessions.insert(std::pair<int, std::vector<std::string>>(sessionID, players));
+                }
+            }
+            GUI->setSessions(sessions);
+        } else if (gettingDataType == GettingDataType::Players) {
+            char userDataProcess[sizeof(ConnectionProcesses::USER_DATA)];
+            strcpy(userDataProcess, ConnectionProcesses::USER_DATA);
+            const char *process = strcat(userDataProcess, "-1");
+            activateConnectionProcess(process);
+            char msg[1024];
+            readData(clientFd, msg, sizeof(msg));
+            std::vector<std::string> players;
+            if (strcmp(msg, "SESSION-KILLED\0") == 0){
+                std::cout << "sesja is dead" << std::endl;
+            } else {
+                char* s;
+                s = strtok(msg,":");
+                long int numPlayers = strtol(s, nullptr, 10);
+                for( int i =0; i < numPlayers; i++ ) {
+                    s = strtok(msg, ",");
                     players.push_back(std::string(s));
                 }
-                sessions.insert(std::pair<int, std::vector<std::string>>(sessionID, players));
+                GUI->setPlayers(players);
             }
         }
-        GUI->setSessions(sessions);
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 }
 
@@ -159,18 +182,12 @@ int Client::goToSession(int id) {
 
     } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) {
 
-    } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) {
+    } else if (strcmp(msg2, "SESSION-MAX\0") == 0) {
 
     } else if (strcmp(msg2, "SESSION-KILLED\0") == 0) {
 
     } else {
         gettingData = false;
-        int i = 1;
-        while (true) {
-            std::cout << i << ": " << std::to_string(dataGetterThread->joinable()) << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            i++;
-        }
         return SessionMessage::CREATED;
     }
 }

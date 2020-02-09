@@ -29,15 +29,29 @@ void MainWindow::setSessions(std::map<int, std::vector<string> > sessions)
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     int i = 0;
     for( auto const& [key, val] : sessions) {
-        std::cout << "i: " << i << std::endl;
         int sessionID = key;
         model->setItem(i, 0, new QStandardItem(QString::fromStdString(std::to_string(sessionID))));
         std::vector<string> players = val;
         model->setItem(i, 1, new QStandardItem(QString::fromStdString(players.at(0))));
         i++;
     }
-    model->setItem(0, 0, new QStandardItem("Kupa"));
 }
+
+void MainWindow::setPlayers(std::vector<string> players)
+{
+    QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
+    int i = 0;
+    for( std::string player : players) {
+        model->setItem(i, 0, new QStandardItem(QString::fromStdString(player)));
+        if ((client->isHost) && (client->login == player)) {
+            model->setItem(i, 1, new QStandardItem("Host"));
+        } else {
+            model->setItem(i, 1, new QStandardItem("Player"));
+        }
+        i++;
+    }
+}
+
 
 char *MainWindow::QStringToChar(QString qs) {
     const char *c = qs.toStdString().c_str();
@@ -118,10 +132,6 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
     switch(client->createSession()) {
     case SessionMessage::CREATED:
         moveToSessionPage();
-        QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
-        model->setItem(0,0,new QStandardItem(QString::fromStdString(client->login)));
-        std::cout << client->login << std::endl;
-        model->setItem(0,1,new QStandardItem("Host"));
         break;
     }
 }
@@ -138,6 +148,7 @@ void MainWindow::moveToSessionPage() {
     ui->tableOfPlayers->verticalHeader()->hide();
     ui->labelSrvName->setText(ui->lineEditSrvName->text());
     ui->pages->setCurrentWidget(ui->pageWaitingRoom);
+    client->gettingDataType = GettingDataType::Players;
 }
 
 void MainWindow::lettersSetEnabled(bool isEnabled)
@@ -246,6 +257,7 @@ void MainWindow::moveToSessionsPage() {
     model->setHorizontalHeaderItem(0, new QStandardItem("Server name"));
     model->setHorizontalHeaderItem(1, new QStandardItem("Host"));
     ui->tableOfServers->setModel(model);
+    client->gettingDataType = GettingDataType::Sessions;
     client->runDataGetter();
 }
 

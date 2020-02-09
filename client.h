@@ -46,6 +46,8 @@ public:
     std::thread* dataGetterThread;
     std::map<int, std::vector<std::string>> availableSessions;
     MainWindow *GUI;
+    GettingDataType gettingDataType;
+    bool isHost = false;
 
 
     Client();

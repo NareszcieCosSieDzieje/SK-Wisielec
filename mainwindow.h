@@ -21,6 +21,7 @@ public:
     MainWindow(Client *cl, QWidget *parent = nullptr);
     ~MainWindow();
     void setSessions(std::map<int, std::vector<std::string>> sessions);
+    void setPlayers(std::vector<string> players);
 
 private slots:
     void on_pushButtonRegister_clicked();

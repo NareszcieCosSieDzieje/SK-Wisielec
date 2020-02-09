@@ -393,15 +393,16 @@ void joinSession(int clientFd){
         	
         	if (playerSessions.empty()){
 	            finalSessionId = 1;
-		        strcpy(buf, "SESSION-1\0");
+		        //strcpy(buf, "SESSION-1\0");
+		        strcpy(buf, "SESSION-GOOD\0");
         	} 
         	else if (playerSessions.size() < maxSessions )   {
 	            finalSessionId = (int)playerSessions.size() +1;
 		        char num[10];
 	            sprintf (num, "%d", finalSessionId);
-	            strcpy(buf, "SESSION-");
-	            strcat(buf, num);
-	            strcat(buf, "\0");
+	            strcpy(buf, "SESSION-GOOD\0");
+	            //strcat(buf, num);
+	            //strcat(buf, "\0");
 	        }
         	std::vector<Player> playerVector;
 	        std::vector<int> playerFds;
@@ -451,6 +452,8 @@ void sendSessionData(int clientSocket){
         sprintf (num, "%d", playerSessions.size());
         strcpy(data, num);
       	strcat(data, ":");
+    } else {
+    	strcpy("NO-SESSIONS");
     }
     for( auto const& [key, val] : playerSessions) {
         int sessionID = key;

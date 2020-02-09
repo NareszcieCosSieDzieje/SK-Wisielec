@@ -13,6 +13,7 @@
 #include <set>
 #include <algorithm>
 #include <atomic>
+ #include <arpa/inet.h>
 
 #include "../statuses.hpp"
 #include "../player.hpp"
@@ -44,6 +45,8 @@ const unsigned int localPort{55555};
 sockaddr_in bindAddr {
         .sin_family = AF_INET,
         .sin_port = htons(localPort),
+        // randomowy port?
+        //.sin_addr.s_addr = inet_addr("127.0.0.1");
         //.sin_addr = htonl(INADDR_ANY)
 };
 
@@ -71,6 +74,7 @@ void joinSession(int clientFd);
 void addToEpoll(int fd);
 void removeFromEpoll(int fd);
 void handlePlayerExit(int clientFd);
+bool validateIpAddress(const std::string &ipAddress);
 std::string loadUserData(char* filePath); //TODO: zwróć array stringów
 
 
@@ -86,12 +90,21 @@ std::string loadUserData(char* filePath); //TODO: zwróć array stringów
 
 int main(int argc, char* argv[]){
 
+	if (argc > 1){ 
+		if (!validateIpAddress(argv[1])){
+			perror("Wrong ip address format!\n");
+			exit(WRONG_IP);
+		} else {
+			inet_pton(AF_INET, argv[1], &(bindAddr.sin_addr));
+		}
+	} else {
+    	bindAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	}
 
     signal(SIGINT, sigHandler);
     signal(SIGTSTP, sigHandler);
 
-    bindAddr.sin_addr.s_addr = htonl(INADDR_ANY); //TODO: ZMIEN NA ADRESOKRESLONY
-
+     
     startServer();
 
     struct epoll_event events[maxEvents];
@@ -177,33 +190,14 @@ int main(int argc, char* argv[]){
             }
             else if( strcmp(msg, "DISCONNECTING\0") == 0){
                 
-                handlePlayerExit(clientFd); //FIXME: nowe obczaj czy ok!
-
                 removeFromEpoll(clientFd);
+                handlePlayerExit(clientFd); //FIXME: nowe obczaj czy ok!
                 stopConnection(clientFd);
             }
             else if ( strcmp(msg,"LOG-OUT\0") == 0){
 
-            	handlePlayerExit(clientFd);
-
                 removeFromEpoll(clientFd);
-
-                /*
-                Player p = clientMap[clientFd];
-                std::string nick = p.getNick();
-
-                playerSessionsMutex.lock();
-                for(auto &fds: playerSessionsFds){
-                    std::vector<int> vec = fds.second;
-                    vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
-                }
-                for(auto &pl: playerSessions){
-                    std::vector<Player> vec = pl.second;
-                    vec.erase( std::remove_if( vec.begin(), vec.end(), [nick](Player py){ return py.getNick() == nick;}), vec.end());
-                }
-                playerSessionsMutex.unlock();
-				*/
-
+            	handlePlayerExit(clientFd);
                 clientMapMutex.lock();
                 clientMap.erase(clientFd);
                 clientMapMutex.unlock();
@@ -239,6 +233,13 @@ int main(int argc, char* argv[]){
 //=======================================FUNC-DEC=========================================\\
 
 
+bool validateIpAddress(const std::string &ipAddress){
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, ipAddress.c_str(), &(sa.sin_addr));
+    return result == 1;
+}
+
+
 void startServer(void){
     if( (serverFd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ){
         perror("Server failed to create socket.\n");
@@ -247,7 +248,7 @@ void startServer(void){
     int enable = 1;
     if( setsockopt(serverFd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0 ){
         perror("Setsockopt(SO_REUSEADDR) in server failed.\n");
-        exit(SOCKET_REEUSE);
+        exit(SOCKET_REUSE);
     }
     if( bind(serverFd, (sockaddr*)&bindAddr, sizeof(bindAddr)) < 0 ){
         perror("Server failed to bind the socket.\n");
@@ -409,7 +410,7 @@ void joinSession(int clientFd){
             playerSessionsMutex.lock();
             playerSessions.insert(std::pair<int, std::vector<Player>>(finalSessionId, playerVector));
             playerSessionsFds.insert(std::pair<int, std::vector<int>>(finalSessionId, playerFds));
-            sessionHosts.insert(std::pair<int, std::string>(finalSessionId, player.getNick()));
+            sessionHosts.insert(std::pair<int, std::string>(finalSessionId, player.getNick() ));
             sessionNames.insert(std::pair<int, std::string>(finalSessionId, std::string(buf) )); 
             playerSessionsMutex.unlock();
             memset(buf, 0, sizeof(buf));
@@ -470,19 +471,19 @@ void sendSessionData(int clientSocket){
 void sendUserData(int clientSocket, char* msg){
 	char data[512]; 	
 	memset(data, 0, sizeof(data));
-    if (players.size() > 0 ){
-	    char * pch;
-	    pch = strtok(msg, "-");
-	    std::stringstream strValue;
-		int sID;
-	    if(pch != nullptr ){
-	        pch = strtok(nullptr, "-");
-	    }
-	    if(pch != nullptr ){
-	    	strValue << pch;
-			strValue >> sID; //convert to int
-	    }
-	    std::vector<Player> players = playerSessions[sID];
+	char * pch;
+    pch = strtok(msg, "-");
+    std::stringstream strValue;
+	int sID;
+    if(pch != nullptr ){
+        pch = strtok(nullptr, "-");
+    }
+    if(pch != nullptr ){
+    	strValue << pch;
+		strValue >> sID; //convert to int
+    }
+	std::vector<Player> players = playerSessions[sID];
+    if (players.size() > 0 ){   
 	    char num[10];
 	    sprintf (num, "%d", players.size());
 	    strcpy(data, num);
@@ -823,7 +824,7 @@ ssize_t readData(int fd, char * buffer, ssize_t buffsize){
 
 void writeData(int fd, char * buffer, ssize_t count){
     auto ret = write(fd, buffer, count);
-    std::cout << "Read ret: " << ret << std::endl;
+    std::cout << "Write ret: " << ret << std::endl;
     if(ret==-1) perror("write failed on descriptor %d\n");
     if(ret!=count) perror("wrote less than requested to descriptor %d (%ld/%ld)\n");
 }

@@ -4,7 +4,7 @@
 
 
 #define SOCKET_CREATE 0
-#define SOCKET_REEUSE 1
+#define SOCKET_REUSE 1
 #define SOCKET_BIND 2
 #define SOCKET_LISTEN 3
 #define SOCKET_ACCEPT 4
@@ -15,6 +15,7 @@
 #define EPOLL_ADD 9
 #define EPOLL_REMOVE 10
 #define EPOLL_WAIT 11
+#define WRONG_IP 12
 
 
 #endif //WISIELEC_STATUSES_HPP

@@ -536,7 +536,8 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                     strcpy(startMsg, "SESSION-KILL\0");
                     write(playerFd, startMsg, sizeof(startMsg));
                 }
-
+                sessionHosts.erase(sessionID);
+                sessionNames.erase(sessionID);
                 playerSessions.erase(sessionID);
                 playerSessionsFds.erase(sessionID);
                 playerSessionsMutex.unlock();

@@ -170,10 +170,7 @@ int main(int argc, char* argv[]){
 				std::cout << "Nazwa sesji = " << a.second << std::endl;
 			}
 			
-			
-			
-
-
+		
             if(ret == 0){
                 //polling = false;
                 handlePlayerExit(clientFd);
@@ -407,13 +404,14 @@ void clientValidation(int newClientFd){ //TODO: obsługa tego ze ten sam login !
         clientMap.insert(std::pair<int, Player>(newClientFd, newPlayer));
         clientMapMutex.unlock();
 
-        addToEpoll(newClientFd);
-
+        
         strcpy(authMsg, "AUTH-OK\0");  //Wyslij ack ze sie zalogował
         writeData(newClientFd, authMsg, sizeof(authMsg));
+        addToEpoll(newClientFd);
     } else {
         strcpy(authMsg, "AUTH-FAIL\0");
         writeData(newClientFd, authMsg, sizeof(authMsg));        //stopConnection(newClientFd);
+        addToEpoll(newClientFd);
         //std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
@@ -457,7 +455,7 @@ void joinSession(int clientFd){
 		        strcpy(sessionId, "1\0");       
         	} 
         	else if (playerSessions.size() < maxSessions )   {
-	            finalSessionId = (int)playerSessions.size() +1;
+	            finalSessionId = (int)playerSessions.size() + 1;
 	            sprintf (sessionId, "%d", finalSessionId);
 	        }
 

@@ -1,28 +1,24 @@
 
 #include "player.hpp"
 
-Player::Player(){
-    this->nick = "default";
-    this->password = "default";
-}
 
-Player::Player(char* nick, char* password) {
-    this->nick = nick;
-    this->password = password;
-}
+Player::Player(const std::string &nick, const std::string &password) : nick(nick), password(password) {}
 
-char *Player::getNick() const {
+
+const std::string &Player::getNick() const {
     return nick;
 }
 
-void Player::setNick(char *nick) {
+void Player::setNick(const std::string &nick) {
     Player::nick = nick;
 }
 
-char *Player::getPassword() const {
+const std::string &Player::getPassword() const {
     return password;
 }
 
-void Player::setPassword(char *password) {
+void Player::setPassword(const std::string &password) {
     Player::password = password;
 }
+
+Player::Player() {}

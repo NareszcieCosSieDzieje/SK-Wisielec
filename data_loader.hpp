@@ -19,9 +19,9 @@ inline bool isDelim(char c) {
 //DODAŁEM PARAMETR DO ROZROZNIENIA REJESTRACJI I LOGWOANIA
 bool searchForUserData(std::string login, std::string password, bool newAccount) {
 
-    std::cout << "searchForData: "<< std::endl;
-    std::cout << "Login: " << login << std::endl;
-    std::cout << "Haslo: " << password << std::endl;
+    //std::cout << "searchForData: "<< std::endl;
+    //std::cout << "Login: " << login << std::endl;
+    //std::cout << "Haslo: " << password << std::endl;
 
     std::ifstream userFile;
     userFile.open ("../user_data.txt", std::ios::in);
@@ -73,7 +73,7 @@ bool searchForUserData(std::string login, std::string password, bool newAccount)
         }
         userFile.close();
     } else {
-        std::cout << "Nie mozna otworzyc pliku!" << std::endl;
+        std::cout << "Couldn't open file!" << std::endl;
     }
     return false;
 }
@@ -89,7 +89,7 @@ void addUser(std::string user, std::string password){
         userFile.close();
         std::cout<<"Successfully appended file!" <<std::endl;
     } else {
-        std::cout<<"Couldn't open file!" <<std::endl;
+        std::cout<< "Couldn't open file!" <<std::endl;
     }
 }
 

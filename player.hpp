@@ -6,21 +6,21 @@
 
 class Player {
 private:
-    char* nick;
-    char* password;
+    std::string nick;
+    std::string password;
 
 public:
     Player();
-    Player(char* nick, char* password);
-    //~Player();
 
-    char *getNick() const;
+    Player(const std::string &nick, const std::string &password);
 
-    void setNick(char *nick);
+    const std::string &getNick() const;
 
-    char *getPassword() const;
+    void setNick(const std::string &nick);
 
-    void setPassword(char *password);
+    const std::string &getPassword() const;
+
+    void setPassword(const std::string &password);
 
 };
 

@@ -137,6 +137,7 @@ void Client::dataGetter() {
         } else if (gettingDataType == GettingDataType::Players) {
             char userDataProcess[sizeof(ConnectionProcesses::USER_DATA)];
             strcpy(userDataProcess, ConnectionProcesses::USER_DATA);
+            //TODO: POBIERZ WARTOSC OBECNEJ SESJI W KTOREJ JESTES
             const char *process = strcat(userDataProcess, "-1"); //TODO: popraw
             activateConnectionProcess(process);
             char msg[512];
@@ -179,7 +180,7 @@ int Client::goToSession(int id) {
     snprintf(msg1, sizeof(msg1), "%d", id);
     writeData(clientFd, msg1, sizeof(msg1));
     if (id == 0) {
-        char msg3[100];
+        char msg3[100]; //TODO: SPRAWDZ CZY NAZWA SESJI MIESCI SIE W TYM !!!!!!!!!!!
         std::string s = GUI->getSrvName();
         strcpy(msg3, s.c_str());
         writeData(clientFd, msg3, sizeof(msg3));

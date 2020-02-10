@@ -391,9 +391,9 @@ void clientValidation(int newClientFd){ //TODO: obsługa tego ze ten sam login !
     	bool loggedIn = false;
     	for(auto &c: clientMap){ // jesli juz zalogowany na dany nick
     		std::cout<<"clientMap.first = " << c.first << "\tclientMap.second (nick) = " << c.second.getNick() << std::endl;
-    		//if (c.second.getNick() == login){
-				//loggedIn = true;
-    		//}*/
+    		if (c.second.getNick() == loginS){
+				loggedIn = true;
+    		}
     	}
     	if(!loggedIn){
         	userExists = searchForUserData(loginS, passwordS, false); //WYWOŁANIE FUNKCJI CZYTAJĄCEJ Z PLIKU
@@ -435,31 +435,29 @@ void joinSession(int clientFd){
     }
     
     sessionMode = (int) strtol(sessionId, NULL, 10);
+    bool secondMsg = false;
 
     if(sessionMode < 0){
         perror("Server join session error - sessionMode < 0\n");
     }
     else if (sessionMode == 0){ //TODO: Czy jak usuniete niskie wartosci to uzywanie od nowa? szczegol tho
 	    ret = readData(clientFd, buf, sizeof(buf)); 
+	    memset(sessionId, 0 , sizeof(sessionId));
 	    if(ret != 100){
 	        perror("Join session read error 2.\n");
 	        return;
 	    }
         if (playerSessions.empty() || playerSessions.size() < maxSessions) {
         	
+        	strcpy(msg, "SESSION-GOOD\0");
+        	secondMsg = true;
         	if (playerSessions.empty()){
 	            finalSessionId = 1;
-		        //strcpy(buf, "SESSION-1\0");
-		        strcpy(msg, "SESSION-GOOD\0");
-
+		        strcpy(sessionId, "1\0");       
         	} 
         	else if (playerSessions.size() < maxSessions )   {
 	            finalSessionId = (int)playerSessions.size() +1;
-		        char num[10];
-	            sprintf (num, "%d", finalSessionId);
-	            strcpy(msg, "SESSION-GOOD\0");
-	            //strcat(buf, num);
-	            //strcat(buf, "\0");
+	            sprintf (sessionId, "%d", finalSessionId);
 	        }
 
         	std::vector<Player> playerVector;
@@ -486,10 +484,13 @@ void joinSession(int clientFd){
             strcpy(msg, "SESSION-MAX\0");
         }
         writeData(clientFd, msg, sizeof(msg));
+        if (secondMsg){
+        	writeData(clientFd, sessionId, sizeof(sessionId)); //TODO: ODKOMENTUJJJ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1111
+        }
     } else {
         playerSessionsMutex.lock();
         if (playerSessions.count(sessionMode) != 0){ //Jak nie ma klucza
-            strcpy(msg, "SESSION-KILLED\0"); //TODO NWOE DLA KAMILA==================================================================================================================================
+            strcpy(msg, "SESSION-KILLED\0"); 
         }
         else {
             if (playerSessions[sessionMode].size() < playersPerSession){
@@ -612,7 +613,9 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                     writeData(playerFd, startMsg, sizeof(startMsg));
                 }
                 sessionHosts.erase(sessionID);
+                std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
                 sessionNames.erase(sessionID);
+                std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
                 playerSessions.erase(sessionID);
                 playerSessionsFds.erase(sessionID);
                 playerSessionsMutex.unlock();
@@ -784,8 +787,10 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         addToEpoll(p);
     }
     //Dodaj do epolla
-
+ 	std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
     sessionNames.erase(sessionID);
+    std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+
 
     playerSessions.erase(sessionID);
     playerSessionsFds.erase(sessionID);
@@ -934,7 +939,10 @@ void handlePlayerExit(int clientFd){
         	std::cout << "Handle (host usuwa sesje)!" << std::endl;
         	playerSessions.erase(session);
         	playerSessionsFds.erase(session);
-        	sessionNames.erase(session);
+        	std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+		    sessionNames.erase(session);
+		    std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+
         	sessionHosts.erase(session);
         } else {                                //jesli to nie to wyrzuc z sesji
             std::cout << "Handle (host nie usuwa sesji!)" << std::endl; 

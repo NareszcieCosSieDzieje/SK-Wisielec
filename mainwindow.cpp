@@ -41,11 +41,11 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 
 void MainWindow::setPlayers(std::vector<string> players)
 {
-    std::cout << "przed" << std::endl;
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
-    std::cout << "po" << std::endl;
     int i = 0;
     for( std::string player : players) {
+        cout << "PETLA -----------" << endl;
+        cout << i << ": " << player << endl;
         model->setItem(i, 0, new QStandardItem(QString::fromStdString(player)));
         if ((client->isHost) && (client->login == player)) {
             model->setItem(i, 1, new QStandardItem("Host"));
@@ -53,8 +53,8 @@ void MainWindow::setPlayers(std::vector<string> players)
             model->setItem(i, 1, new QStandardItem("Player"));
         }
         i++;
+        cout << "-----------------" << endl;
     }
-    std::cout << "po petli" << std::endl;
 }
 
 

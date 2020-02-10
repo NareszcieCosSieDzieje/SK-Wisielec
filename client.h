@@ -41,6 +41,7 @@ public:
     int joinedSessionID{};
     std::string login;
     std::string password;
+    std::string inSessionID;
     bool connected = true;
     bool gettingData = false;
     std::thread* dataGetterThread;

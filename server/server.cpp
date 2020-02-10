@@ -435,6 +435,7 @@ void joinSession(int clientFd){
     }
     
     sessionMode = (int) strtol(sessionId, NULL, 10);
+    memset(sessionId, 0 , sizeof(sessionId));
     bool secondMsg = false;
 
     if(sessionMode < 0){
@@ -442,7 +443,7 @@ void joinSession(int clientFd){
     }
     else if (sessionMode == 0){ //TODO: Czy jak usuniete niskie wartosci to uzywanie od nowa? szczegol tho
 	    ret = readData(clientFd, buf, sizeof(buf)); 
-	    memset(sessionId, 0 , sizeof(sessionId));
+	   
 	    if(ret != 100){
 	        perror("Join session read error 2.\n");
 	        return;
@@ -485,7 +486,7 @@ void joinSession(int clientFd){
         }
         writeData(clientFd, msg, sizeof(msg));
         if (secondMsg){
-        	writeData(clientFd, sessionId, sizeof(sessionId)); //TODO: ODKOMENTUJJJ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1111
+        	writeData(clientFd, sessionId, sizeof(sessionId)); 
         }
     } else {
         playerSessionsMutex.lock();
@@ -495,17 +496,23 @@ void joinSession(int clientFd){
         else {
             if (playerSessions[sessionMode].size() < playersPerSession){
             playerSessions[sessionMode].push_back(player);
+            
             char num[10];
             sprintf (num, "%d", sessionMode);
-            strcpy(msg, "SESSION-");
-            strcat(msg, num);
-            strcat(msg, "\0");
+            
+            strcpy(msg, "SESSION-GOOD\0");
+            strcpy(sessionId, num);
+            //strcat(msg, "\0");
+            secondMsg = true;
             } else {
                 strcpy(msg, "SESSION-BUSY\0");
             }
         }
         playerSessionsMutex.lock();
         writeData(clientFd, msg, sizeof(msg));
+        if (secondMsg){
+        	writeData(clientFd, sessionId, sizeof(sessionId)); 
+        }
     }
     addToEpoll(clientFd);
 }

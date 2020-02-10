@@ -44,8 +44,10 @@ public:
     bool connected = true;
     bool gettingData = false;
     std::thread* dataGetterThread;
-    std::map<int, std::vector<std::string>> availableSessions;
     MainWindow *GUI;
+    GettingDataType gettingDataType;
+    bool isHost = false;
+    std::map<int, std::pair<std::string, std::string>> *availableSessions;
 
 
     Client();

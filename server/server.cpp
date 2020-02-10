@@ -131,7 +131,7 @@ int main(int argc, char* argv[]){
             int ret = readData(clientFd, msg, sizeof(msg));
 
             if(ret == 0){
-                polling = false;
+                //polling = false;
                 removeFromEpoll(clientFd);
                 stopConnection(clientFd);
                 continue;
@@ -295,7 +295,7 @@ void listenLoop(void){
 }
 
 
-void clientValidation(int newClientFd){
+void clientValidation(int newClientFd){ //TODO: obsługa tego ze ten sam login !!!
 
     std::cout << "WERYFIKACJA KLIENTA - fd: " << newClientFd << std::endl;
     //TODO: Czy sprawdzać port klienta?
@@ -377,6 +377,7 @@ void joinSession(int clientFd){
         perror("Join session read error 1.\n");
         return;
     }
+    
     sessionMode = (int) strtol(sessionId, NULL, 10);
 
     if(sessionMode < 0){
@@ -757,8 +758,9 @@ void addToEpoll(int fd){
 void removeFromEpoll(int fd){
     if ( epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, nullptr) < 0 ){
         perror("Server failed to delete clientfd from epoll.\n");
-        close(epollFd);
-        exit(EPOLL_REMOVE);
+        
+        //close(epollFd);
+        //exit(EPOLL_REMOVE);
     }
 }
 

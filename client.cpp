@@ -70,7 +70,6 @@ void Client::startConnection(void){
         exit(SOCKET_CONNECT);
     }
     freeaddrinfo(resolved);
-    activateConnectionProcess(ConnectionProcesses::VALIDATION);
 }
 
 ssize_t Client::readData(int fd, char * buffer, ssize_t buffsize){
@@ -91,6 +90,7 @@ void Client::writeData(int fd, char * buffer, ssize_t count){
 }
 
 int Client::authorize(char *log, char *pass, int authKind) {
+    activateConnectionProcess(ConnectionProcesses::VALIDATION);
     char msg1[10];
     snprintf(msg1, sizeof(msg1), "%d", authKind);
     writeData(clientFd, msg1, sizeof(msg1));

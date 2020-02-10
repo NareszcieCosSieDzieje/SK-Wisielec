@@ -380,7 +380,7 @@ void clientValidation(int newClientFd){ //TODO: obsługa tego ze ten sam login !
     //std::cout << "char pass: " << pass << "\tstr pass: " << passwordS << std::endl;
 
     if(cT == signup){
-        if (!searchForUserData(loginS, passwordS, true)) {
+        if (searchForUserData(loginS, passwordS, true)) {
             addUser(loginS, passwordS);
             userExists = true;
         } //else na koncu obejmuje jak nie przejdzie czyli AUTH-FAIL

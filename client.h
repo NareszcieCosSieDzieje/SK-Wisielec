@@ -64,9 +64,9 @@ public:
     void runDataGetter();
     void joinSession(int id);
     int createSession();
+    int goToSession(int id);
 private:
     void dataGetter();
-    int goToSession(int id);
 };
 
 #endif // CLIENT_H

@@ -95,7 +95,25 @@ void MainWindow::on_pushButtonLogin_clicked()
 
 void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
 {
-    cout << index.row() << endl;
+    QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
+    std::string host = model->item(index.row(), 1)->text().toStdString();
+    cout << "host: " << host << endl;
+    int id;
+    for(auto &elem : *(client->availableSessions)) {
+        if (elem.second.second == host) {
+            id = elem.first;
+            break;
+        }
+    }
+    cout << "id: " << id << endl;
+    std::cout << "JOINING SERVER" << std::endl;
+    client->gettingData = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    switch(client->goToSession(id)) {
+    case SessionMessage::JOINED:
+        moveToSessionPage();
+        break;
+    }
 }
 
 void MainWindow::on_pushButtonSignup_clicked()

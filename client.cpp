@@ -184,6 +184,7 @@ int Client::goToSession(int id) {
     }
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));
+    cout << "po readzie" << endl;
     if (strncmp(msg2, "SESSION-MAX\0", 9) == 0) {
 
     } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) { // TODO
@@ -201,7 +202,7 @@ int Client::goToSession(int id) {
             isHost = true;
             return SessionMessage::CREATED;
         } else {
-
+            return SessionMessage::JOINED;
         }
     } else {
         std::cout << "msg2: " << msg2 << std::endl;

@@ -243,7 +243,6 @@ int main(int argc, char* argv[]){
                 clientMapMutex.lock();
                 clientMap.erase(clientFd);
                 clientMapMutex.unlock();
-
             }
             /*
             if( clientEvent.events & EPOLLIN && clientEvent.data.fd == sock ){
@@ -487,27 +486,31 @@ void joinSession(int clientFd){
         	writeData(clientFd, sessionId, sizeof(sessionId)); 
         }
     } else {
+    	std::cout << " WSZEDL W DOLACZENIE DO SESJI " << std::endl;
         playerSessionsMutex.lock();
         if (playerSessions.count(sessionMode) != 0){ //Jak nie ma klucza
             strcpy(msg, "SESSION-KILLED\0"); 
+        	std::cout << " DOLACZANIE SESSION KILL  " << std::endl;
         }
         else {
-            if (playerSessions[sessionMode].size() < playersPerSession){
-            playerSessions[sessionMode].push_back(player);
-            
-            char num[10];
-            sprintf (num, "%d", sessionMode);
-            
-            strcpy(msg, "SESSION-GOOD\0");
-            strcpy(sessionId, num);
-            //strcat(msg, "\0");
-            secondMsg = true;
+        	if (playerSessions[sessionMode].size() < playersPerSession){
+	            playerSessions[sessionMode].push_back(player);
+	            
+	            char num[10];
+	            sprintf (num, "%d", sessionMode);
+	            std::cout << " DOLACZANIE SESSION GOOD " << std::endl;
+	            strcpy(msg, "SESSION-GOOD\0");
+	            strcpy(sessionId, num);
+	            //strcat(msg, "\0");
+	            secondMsg = true;
             } else {
                 strcpy(msg, "SESSION-BUSY\0");
+                std::cout << " DOLACZANIE SESSION BUSY " << std::endl;
             }
         }
         playerSessionsMutex.lock();
         writeData(clientFd, msg, sizeof(msg));
+        std::cout << " DOLACZANIE WYSLAL DANE " << std::endl;
         if (secondMsg){
         	writeData(clientFd, sessionId, sizeof(sessionId)); 
         }

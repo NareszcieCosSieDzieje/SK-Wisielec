@@ -237,8 +237,6 @@ int main(int argc, char* argv[]){
                 stopConnection(clientFd);
             }
             else if ( strcmp(msg,"LOG-OUT\0") == 0){
-
-                removeFromEpoll(clientFd);
             	handlePlayerExit(clientFd);
                 clientMapMutex.lock();
                 clientMap.erase(clientFd);

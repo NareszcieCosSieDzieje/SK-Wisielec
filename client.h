@@ -65,6 +65,7 @@ public:
     void joinSession(int id);
     int createSession();
     int goToSession(int id);
+    void killGettingDataProcess();
 private:
     void dataGetter();
 };

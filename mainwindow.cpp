@@ -7,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <QString>
+#include <QCloseEvent>
 
 #include "constants.h"
 
@@ -107,8 +108,7 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
     }
     cout << "id: " << id << endl;
     std::cout << "JOINING SERVER" << std::endl;
-    client->gettingData = false;
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    client->killGettingDataProcess();
     switch(client->goToSession(id)) {
     case SessionMessage::JOINED:
         moveToSessionPage();
@@ -153,8 +153,7 @@ void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
     std::cout << "CREATING SERVER" << std::endl;
-    client->gettingData = false;
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    client->killGettingDataProcess();
     switch(client->createSession()) {
     case SessionMessage::CREATED:
         moveToSessionPage();
@@ -218,7 +217,7 @@ void MainWindow::on_pushButtonStart_clicked()
     for (int sec = 3; sec >= 1; --sec) {
         ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
         this->repaint();
-        sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
     ui->labelCounter->setVisible(false);
     currentWord = generateWord();
@@ -300,4 +299,17 @@ void MainWindow::on_pushButtonBackToSessions_clicked()
 void MainWindow::on_pushButtonBackToLogin_clicked()
 {
     ui->pages->setCurrentWidget(ui->pageLogin);
+}
+
+void MainWindow::on_pushButtonLogout_clicked()
+{
+    client->killGettingDataProcess();
+    client->activateConnectionProcess(ConnectionProcesses::LOGOUT);
+    ui->pages->setCurrentWidget(ui->pageLogin);
+}
+
+void MainWindow::closeEvent (QCloseEvent *event)
+{
+    client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
+    event->accept();
 }

@@ -496,7 +496,7 @@ void joinSession(int clientFd){
         	if (playerSessions[sessionMode].size() < playersPerSession){
 	            playerSessions[sessionMode].push_back(player);
 	        
-	            sprintf (sessonId, "%d", sessionMode);
+	            sprintf (sessionId, "%d", sessionMode);
 	            std::cout << " DOLACZANIE SESSION GOOD " << std::endl;
 	            strcpy(msg, "SESSION-GOOD\0");
 	            //strcat(msg, "\0");
@@ -506,7 +506,7 @@ void joinSession(int clientFd){
                 std::cout << " DOLACZANIE SESSION BUSY " << std::endl;
             }
         }
-        playerSessionsMutex.lock();
+        playerSessionsMutex.unlock();
         writeData(clientFd, msg, sizeof(msg));
         std::cout << " DOLACZANIE WYSLAL DANE " << std::endl;
         if (secondMsg){
@@ -549,7 +549,7 @@ void sendSessionData(int clientSocket){
 }
 
 
-void sendUserData(int clientSocket, char* msg){
+void sendUserData(int clientSocket, char* msg){ //wyslij hsota
 	char data[512];
 	memset(data, 0, sizeof(data));
 	char * pch;
@@ -571,9 +571,14 @@ void sendUserData(int clientSocket, char* msg){
 	    sprintf (num, "%d", players.size());
 	    strcpy(data, num);
 	    strcat(data,":");
+	    std::string host = sessionHosts[sID];
+	    strcat(data, host.c_str());
+	    strcat(data, ",");
 	    for (auto & element : players) {
-	        strcat(data, element.getNick().c_str() );
-	        strcat(data, ",");
+	    	if (element.getNick() != host){
+	    		strcat(data, element.getNick().c_str() );
+	        	strcat(data, ",");	
+	    	}
 	    }
 	} else {
 		strcpy(data, "SESSION-QUIT\0"); //TODO: jezeli host wyjdzie to niech usunie ludzi i rozwiaze sesje

@@ -45,6 +45,8 @@ private slots:
 
     void on_pushButtonBackToLogin_clicked();
 
+    void on_pushButtonLogout_clicked();
+
 private:
     Ui::MainWindow *ui;
 
@@ -67,6 +69,8 @@ private:
     void moveToSessionsPage();
 
     void moveToSessionPage();
+
+    void closeEvent (QCloseEvent *event);
 };
 
 #endif // MAINWINDOW_H

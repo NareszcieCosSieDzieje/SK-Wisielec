@@ -237,8 +237,6 @@ int main(int argc, char* argv[]){
                 stopConnection(clientFd);
             }
             else if ( strcmp(msg,"LOG-OUT\0") == 0){
-
-                removeFromEpoll(clientFd);
             	handlePlayerExit(clientFd);
                 clientMapMutex.lock();
                 clientMap.erase(clientFd);
@@ -496,7 +494,7 @@ void joinSession(int clientFd){
         	if (playerSessions[sessionMode].size() < playersPerSession){
 	            playerSessions[sessionMode].push_back(player);
 	        
-	            sprintf (sessonId, "%d", sessionMode);
+	            sprintf (sessionId, "%d", sessionMode);
 	            std::cout << " DOLACZANIE SESSION GOOD " << std::endl;
 	            strcpy(msg, "SESSION-GOOD\0");
 	            //strcat(msg, "\0");
@@ -506,7 +504,7 @@ void joinSession(int clientFd){
                 std::cout << " DOLACZANIE SESSION BUSY " << std::endl;
             }
         }
-        playerSessionsMutex.lock();
+        playerSessionsMutex.unlock();
         writeData(clientFd, msg, sizeof(msg));
         std::cout << " DOLACZANIE WYSLAL DANE " << std::endl;
         if (secondMsg){

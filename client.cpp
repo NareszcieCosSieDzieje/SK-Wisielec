@@ -34,7 +34,7 @@ void Client::init(){
     startClient();
     startConnection();
     while (connected) {
-        sleep(0.5);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
     std::cout << "Out of main loop" << std::endl;
     closeClient();
@@ -160,7 +160,7 @@ void Client::dataGetter() {
                 GUI->setPlayers(players);
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -210,27 +210,12 @@ int Client::goToSession(int id) {
     }
 }
 
+void Client::killGettingDataProcess()
+{
+    gettingData = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+}
+
 int Client::createSession() {
     return goToSession(0);
 }
-
-/*
-int recv_all(int sockfd, void *buf, size_t len, int flags)
-{
-    size_t toread = len;
-    char  *bufptr = (char*) buf;
-
-    while (toread > 0)
-    {
-        ssize_t rsz = recv(sockfd, bufptr, toread, flags);
-        if (rsz <= 0)
-            return rsz;  // Errr or other end closed cnnection
-
-        toread -= rsz;  // Read less next time
-        bufptr += rsz;  // Next buffer position to read into
-    }
-
-    return len;
-}
-
-*/

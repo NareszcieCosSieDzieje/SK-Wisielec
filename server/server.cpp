@@ -488,19 +488,17 @@ void joinSession(int clientFd){
     } else {
     	std::cout << " WSZEDL W DOLACZENIE DO SESJI " << std::endl;
         playerSessionsMutex.lock();
-        if (playerSessions.count(sessionMode) != 0){ //Jak nie ma klucza
+        if (playerSessions.count(sessionMode) != 1){ //Jak nie ma klucza
             strcpy(msg, "SESSION-KILLED\0"); 
         	std::cout << " DOLACZANIE SESSION KILL  " << std::endl;
         }
         else {
         	if (playerSessions[sessionMode].size() < playersPerSession){
 	            playerSessions[sessionMode].push_back(player);
-	            
-	            char num[10];
-	            sprintf (num, "%d", sessionMode);
+	        
+	            sprintf (sessonId, "%d", sessionMode);
 	            std::cout << " DOLACZANIE SESSION GOOD " << std::endl;
 	            strcpy(msg, "SESSION-GOOD\0");
-	            strcpy(sessionId, num);
 	            //strcat(msg, "\0");
 	            secondMsg = true;
             } else {

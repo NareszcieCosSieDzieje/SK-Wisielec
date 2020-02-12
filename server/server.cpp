@@ -27,7 +27,9 @@
 //=====================================GLOBALS============================================\\
 
 std::vector<std::thread> threadVector;
-//std::vector<int> clientSockets; //FIXME:!
+
+std::vector<int> clientSockets; 
+std::mutex clientSocketsMutex;
 
 std::map<int, Player> clientMap;
 std::mutex clientMapMutex;
@@ -341,16 +343,21 @@ void listenLoop(void){
                exit(SOCKET_ACCEPT);
            }
         }
-	    clientMapMutex.lock();
-        int mapSize = clientMap.size();
-        clientMapMutex.unlock();
+
+        clientSocketsMutex.lock();
+        int sockets = clientSockets.size();
+        clientSocketsMutex.unlock();
+
         char msg[20];
-        if (mapSize == maxSessions*playersPerSession){
+        if (sockets == maxEvents){
         	strcpy(msg, "SERVER-MAX\0");
         	writeData(newClient, msg, sizeof(msg));
         	stopConnection(newClient);
         	//TODO: ZAMKNIJ GRACZA--------------------------------------------------------------------------------------
         } else {
+            clientSocketsMutex.lock();
+            clientSockets.push_back(newClient);
+            clientSocketsMutex.unlock();
         	strcpy(msg, "SERVER-OK\0");
         	writeData(newClient, msg, sizeof(msg));
         	addToEpoll(newClient);
@@ -943,6 +950,9 @@ void stopConnection(int ClientFd){
     }
     playerSessionsMutex.unlock();
     */
+    clientSocketsMutex.lock();
+    clientSockets.push_back(ClientFd);
+    clientSocketsMutex.unlock();
 
     clientMapMutex.lock();
     clientMap.erase(ClientFd);

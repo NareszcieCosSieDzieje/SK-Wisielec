@@ -348,6 +348,7 @@ void listenLoop(void){
         if (mapSize == maxSessions*playersPerSession){
         	strcpy(msg, "SERVER-MAX\0");
         	writeData(newClient, msg, sizeof(msg));
+        	stopConnection(newClient);
         	//TODO: ZAMKNIJ GRACZA--------------------------------------------------------------------------------------
         } else {
         	strcpy(msg, "SERVER-OK\0");
@@ -967,8 +968,6 @@ void sigHandler(int signal){
     if (threadVector[0].joinable()) { //SPRAWDZ JOINOWANIE
         threadVector[0].join();
     }
-
-
 }
 
 

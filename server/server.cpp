@@ -148,7 +148,7 @@ int main(int argc, char* argv[]){
 			
             if(ret == 0){
                 //polling = false;
-                handlePlayerExit(clientFd);
+                //handlePlayerExit(clientFd);
                 removeFromEpoll(clientFd);
                 stopConnection(clientFd);
                 continue;
@@ -217,7 +217,7 @@ int main(int argc, char* argv[]){
             else if( strcmp(msg, "DISCONNECTING\0") == 0){
                 
                 removeFromEpoll(clientFd);
-                handlePlayerExit(clientFd); //FIXME: nowe obczaj czy ok!
+                //handlePlayerExit(clientFd); //FIXME: nowe obczaj czy ok!
                 stopConnection(clientFd);
             }
             else if ( strcmp(msg,"LOG-OUT\0") == 0){
@@ -423,6 +423,7 @@ void joinSession(int clientFd){
     char msg[100];
     char sessionId[20];
     int ret = readData(clientFd, sessionId, sizeof(sessionId)); // int read = recv(clientFd, sessionId, sizeof(sessionId), MSG_DONTWAIT); 
+    std::cout << "======================>SESSION ID WYSLANE W JOIN SESSION =>>>>>>>> " << sessionId << std::endl;
     if(ret != 20){
         perror("Join session read error 1.\n");
         return;
@@ -925,13 +926,20 @@ void stopConnection(int ClientFd){
     }
     playerSessionsMutex.unlock();
     */
+
+    handlePlayerExit(ClientFd);
+
+    
+    clientMapMutex.lock();
+        if (clientMap.count(ClientFd) == 1){
+            clientMap.erase(ClientFd);
+        }
+    clientMapMutex.unlock();
+
     clientSocketsMutex.lock();
     clientSockets.erase(std::remove(clientSockets.begin(), clientSockets.end(), ClientFd), clientSockets.end());
     clientSocketsMutex.unlock();
 
-    clientMapMutex.lock();
-    clientMap.erase(ClientFd);
-    clientMapMutex.unlock();
 
     if (shutdown(ClientFd, SHUT_RDWR) < 0 ){
         perror("Failed to disconnect with the client.\n");
@@ -961,6 +969,9 @@ ssize_t readData(int fd, char * buffer, ssize_t buffsize){
     //std::cout << "Read ret: " << ret << std::endl;
     if(ret == 0){
         //CLOSE CONNECTION WITH CLIENT
+        clientMapMutex.lock();
+        std::cout << "!!---!_!_!_!_!_!_!______Read ZERO ON:\nFD: " << fd << "\nNICK: " << clientMap[fd].getNick() << std::endl;
+        clientMapMutex.unlock();
         stopConnection(fd);
     }
 
@@ -1019,16 +1030,9 @@ void handlePlayerExit(int clientFd){
 
 
 	clientMapMutex.lock(); //==================MUTEX-NEW!
-
-	std::cout << "Handle (rozmiar mapy)przed = " << clientMap.size() << std::endl; 
-
 	std::string playerNick = clientMap[clientFd].getNick();
-
 	clientMapMutex.unlock();
 
-	std::cout << "Handle (player nick)1 = " << playerNick << std::endl; //FIXME: NICK PUSTY!!!!!!!!!!!!!!!!!!!!!
-
-	
 	playerSessionsFdsMutex.lock();
 
     int session = 0;
@@ -1046,8 +1050,6 @@ void handlePlayerExit(int clientFd){
     	}
     }
 
-    std::cout << "Handle (Session id) = " << session << std::endl;
-
     playerSessionsFdsMutex.unlock();
 
 	sessionHostsMutex.lock();    
@@ -1055,11 +1057,7 @@ void handlePlayerExit(int clientFd){
     std::string hostNick = sessionHosts[session]; 
     sessionHostsMutex.unlock();
 
-    clientMapMutex.lock();
-    std::string clientNick = clientMap[clientFd].getNick();
-    clientMapMutex.unlock();
-
-    bool isHost = (hostNick == clientNick);
+    bool isHost = (hostNick == playerNick);
 
 
     
@@ -1079,20 +1077,23 @@ void handlePlayerExit(int clientFd){
 		sessionHostsMutex.lock();
     	sessionHosts.erase(session);
     	sessionHostsMutex.unlock();
-    } else {                                //jesli to nie to wyrzuc z sesji
-                std::cout << "Handle (host nie usuwa sesji!)" << std::endl; 
+    } else {             
+        
         playerSessionsMutex.lock();
-        for(auto &s: playerSessions) {
-            auto it = s.second.begin();
-            while (it != s.second.end()) {
+        if (playerSessions.count(session) == 1) {
+            auto it = playerSessions[session].begin();
+            while (it != playerSessions[session].end()) {
                 if (it->getNick() == playerNick) {
-                    it = s.second.erase(it);
+                    it = playerSessions[session].erase(it);
                 } else {
                     ++it;
                 }
             }
         }
         playerSessionsMutex.unlock();
+
+        std::cout << "Handle (host nie usuwa sesji!)" << std::endl; 
+        
         playerSessionsFdsMutex.lock();
         for(auto &fds: playerSessionsFds){
             std::vector<int> vec = fds.second;

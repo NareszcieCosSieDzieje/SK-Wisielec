@@ -24,6 +24,7 @@ public:
     void setPlayers(std::vector<string> players);
 
     string getSrvName();
+    void closeOnMaxPlayers();
 private slots:
     void on_pushButtonRegister_clicked();
 

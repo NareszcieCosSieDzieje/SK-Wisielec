@@ -62,7 +62,7 @@ sockaddr_in bindAddr {
 
 int maxSessions = 2; //TODO: ile sesji?
 int playersPerSession = 4;
-const int maxEvents = maxSessions * playersPerSession;
+const int maxEvents = 2;//maxSessions * playersPerSession;
 
 std::atomic<bool> SERVER_SHUT_DOWN(false);
 
@@ -347,7 +347,6 @@ void listenLoop(void){
         clientSocketsMutex.lock();
         int sockets = clientSockets.size();
         clientSocketsMutex.unlock();
-
         char msg[20];
         if (sockets == maxEvents){
         	strcpy(msg, "SERVER-MAX\0");

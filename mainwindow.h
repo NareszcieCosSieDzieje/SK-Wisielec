@@ -47,6 +47,8 @@ private slots:
 
     void on_pushButtonLogout_clicked();
 
+    void on_pushButtonLeave_clicked();
+
 private:
     Ui::MainWindow *ui;
 

@@ -109,9 +109,30 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
     cout << "id: " << id << endl;
     std::cout << "JOINING SERVER" << std::endl;
     client->killGettingDataProcess();
+    QMessageBox msgBox;
     switch(client->goToSession(id)) {
     case SessionMessage::JOINED:
         moveToSessionPage();
+        break;
+    case SessionMessage::BUSY:
+        msgBox.setText("Sorry, this server is full");
+        msgBox.exec();
+        client->runDataGetter();
+        break;
+    case SessionMessage::KILLED:
+        msgBox.setText("Sorry, the server doesn't exist");
+        msgBox.exec();
+        client->runDataGetter();
+        break;
+    case SessionMessage::SESSION_ERROR:
+        msgBox.setText("Ow, something went wrong. Please try again later.");
+        msgBox.exec();
+        client->runDataGetter();
+        break;
+    case SessionMessage::MAX:
+        msgBox.setText("Ow, something went wrong. Please try again later.");
+        msgBox.exec();
+        client->runDataGetter();
         break;
     }
 }
@@ -154,9 +175,14 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
 {
     std::cout << "CREATING SERVER" << std::endl;
     client->killGettingDataProcess();
+    QMessageBox msgBox;
     switch(client->createSession()) {
     case SessionMessage::CREATED:
         moveToSessionPage();
+        break;
+    case SessionMessage::MAX:
+        msgBox.setText("Sorry, too many servers are created");
+        msgBox.exec();
         break;
     }
 }
@@ -312,4 +338,11 @@ void MainWindow::closeEvent (QCloseEvent *event)
 {
     client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
     event->accept();
+}
+
+void MainWindow::on_pushButtonLeave_clicked()
+{
+    client->killGettingDataProcess();
+    client->activateConnectionProcess(ConnectionProcesses::SESSION_OUT);
+    moveToSessionsPage();
 }

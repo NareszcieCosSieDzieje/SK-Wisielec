@@ -33,7 +33,8 @@ enum SessionMessage {
     JOINED,
     MAX,
     BUSY,
-    KILLED
+    KILLED,
+    SESSION_ERROR
 };
 
 enum GettingDataType {

@@ -186,13 +186,11 @@ int Client::goToSession(int id) {
     readData(clientFd, msg2, sizeof(msg2));
     cout << "po readzie" << endl;
     if (strncmp(msg2, "SESSION-MAX\0", 9) == 0) {
-
+        return SessionMessage::MAX;
     } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) { // TODO
-
-    } else if (strcmp(msg2, "SESSION-MAX\0") == 0) { // TODO
-
+        return SessionMessage::BUSY;
     } else if (strcmp(msg2, "SESSION-KILLED\0") == 0) { // TODO
-
+        return SessionMessage::KILLED;
     } else if (strcmp(msg2, "SESSION-GOOD\0") == 0) { // TODO
         char msgNum[20];
         readData(clientFd, msgNum, sizeof(msgNum));
@@ -205,8 +203,8 @@ int Client::goToSession(int id) {
             return SessionMessage::JOINED;
         }
     } else {
-        std::cout << "msg2: " << msg2 << std::endl;
-        std::cout << msg2 << std::endl;
+        std::cout << "ERROR. Readed data: " << msg2 << std::endl;
+        return SessionMessage::SESSION_ERROR;
     }
 }
 

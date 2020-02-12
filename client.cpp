@@ -127,6 +127,7 @@ void Client::dataGetter() {
             activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
             char msg[2048];
             readData(clientFd, msg, sizeof(msg));
+            cout << "SESSIONS DATA = \"" << msg << "\"" << endl;
             std::map<int, std::pair<string, string>> sessions;
             if(msg[0] == '\0'){
                 std::cout << "no sessions" << std::endl; //TODO: brak sesji
@@ -134,10 +135,15 @@ void Client::dataGetter() {
                 char *s;
                 s = strtok(msg,":");
                 long int numSessions = strtol(s, nullptr, 10);
+                cout << "numSessions = " << numSessions << endl;
                 for( int i =0; i < numSessions; i++ ) {
+                    cout << "getter" << endl;
                     int sessionID = strtol(strtok(NULL, "-"), nullptr, 10);
+                    cout << "getter" << endl;
                     string name = strtok(NULL, "-");
+                    cout << "getter" << endl;
                     string host = strtok(NULL, ";");
+                    cout << "getter" << endl;
                     sessions.insert(std::pair<int, std::pair<string, string>>(sessionID, std::pair<string, string> (name, host)));
                 }
             }
@@ -153,7 +159,8 @@ void Client::dataGetter() {
             char msg[512];
             readData(clientFd, msg, sizeof(msg));
             if (strcmp(msg, "SESSION-QUIT\0") == 0){
-                std::cout << "sesja is dead" << std::endl; //TODO wyrzuć z sesji
+                killGettingDataProcess();
+                GUI->moveToSessionsPage();
             } else {
                 std::vector<std::string> players;
                 std::cout << msg << std::endl;

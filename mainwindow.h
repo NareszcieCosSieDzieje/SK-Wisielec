@@ -6,6 +6,7 @@
 #include <string>
 #include <client.h>
 #include <QStandardItem>
+#include <QAbstractButton>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -25,6 +26,7 @@ public:
 
     string getSrvName();
     void closeOnMaxPlayers();
+    void moveToSessionsPage();
 private slots:
     void on_pushButtonRegister_clicked();
 
@@ -61,6 +63,8 @@ private:
 
     QStandardItemModel *sessionsListModel;
 
+    bool connectionApproved = false;
+
     string generateWord();
 
     void lettersSetEnabled(bool isEnabled);
@@ -69,11 +73,11 @@ private:
 
     char *QStringToChar(QString qs);
 
-    void moveToSessionsPage();
-
     void moveToSessionPage();
 
     void closeEvent (QCloseEvent *event);
+
+    void setButtonEnabled(QAbstractButton *button, bool enabled);
 };
 
 #endif // MAINWINDOW_H

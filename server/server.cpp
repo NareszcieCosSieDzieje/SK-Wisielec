@@ -33,11 +33,19 @@ std::map<int, Player> clientMap;
 std::mutex clientMapMutex;
 
 std::map<int, std::vector<Player>> playerSessions;
-std::map<int, std::vector<int>> playerSessionsFds;
 std::mutex playerSessionsMutex;
 
+std::map<int, std::vector<int>> playerSessionsFds;
+std::mutex playerSessionsFdsMutex;
+
 std::map<int, std::string> sessionHosts; // USUWANIE HOSTA !=========================================================
+std::mutex sessionHostsMutex;
+
 std::map<int, std::string> sessionNames;
+std::mutex sessionNamesMutex;
+
+std::mutex writeToFileMutex;
+
 
 int epollFd{};
 int serverFd{};
@@ -55,6 +63,7 @@ int playersPerSession = 4;
 const int maxEvents = maxSessions * playersPerSession;
 
 std::atomic<bool> SERVER_SHUT_DOWN(false);
+
 
 //========================================FUNC PROTO========================================\\
 
@@ -197,10 +206,15 @@ int main(int argc, char* argv[]){
                 int session = 0;
                 char msg[100];
 
+                clientMapMutex.lock();
                 std::string nick = clientMap[clientFd].getNick();
+ 				clientMapMutex.unlock();
 
                 bool found = false;
                 //TODO BLOKADA NA DODAWANIA PRZY STARCIE SESJI!!!!
+
+				
+				playerSessionsMutex.lock();
                 for(auto &elem: playerSessions){
                     for(auto &plr : elem.second){
                         if (plr.getNick() == nick){
@@ -213,12 +227,16 @@ int main(int argc, char* argv[]){
                         break;
                     }
                 }
-                if (playerSessions[session].size() >= 2){
+                int sessionSize = playerSessions[session].size();
+                playerSessionsMutex.unlock();
+                if ( sessionSize >= 2){
                     strcpy(msg, "START-SESSION-OK\0");
+                    playerSessionsFdsMutex.lock();
                     for(auto &client: playerSessionsFds[session]){
                         removeFromEpoll(client);
                         writeData(client, msg, sizeof(msg)); //spromptować każdego do uruchomienia sesji
                     }
+                    playerSessionsFdsMutex.unlock();
                     // TODO: przywroc w sesji GRACZY do EPOLLA!--------------------------------------
                     std::thread sT(sessionLoop, session);
                     sT.detach(); //FIXME:??
@@ -313,10 +331,7 @@ void listenLoop(void){
     while(true){
         sockaddr_in clientAddr{};
         socklen_t cliLen = sizeof(clientAddr);
-        if(clientMap.size() == maxSessions*playersPerSession){ //FIXME: CZY TO JEST OKEJ?
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            continue;
-        }
+
         int newClient = accept(serverFd, (struct sockaddr *)&clientAddr, &cliLen); //Nawiąż nowe połączenie z klientem.
         if (newClient < 0) {
            if (errno == EINVAL && SERVER_SHUT_DOWN) {
@@ -326,15 +341,25 @@ void listenLoop(void){
                exit(SOCKET_ACCEPT);
            }
         }
-        addToEpoll(newClient);
-        //std::thread validationThread(clientValidation, newClient); //Nowe połączenie przeslij do zweryfikowania
-        //validationThread.detach();
+	    clientMapMutex.lock();
+        int mapSize = clientMap.size();
+        clientMapMutex.unlock();
+        char msg[20];
+        if (mapSize == maxSessions*playersPerSession){
+        	strcpy(msg, "SERVER-MAX\0");
+        	writeData(newClient, msg, sizeof(msg));
+        	//TODO: ZAMKNIJ GRACZA--------------------------------------------------------------------------------------
+        } else {
+        	strcpy(msg, "SERVER-OK\0");
+        	writeData(newClient, msg, sizeof(msg));
+        	addToEpoll(newClient);
+        } 
     }
     //TODO: jeśli jakis condition_variable to zakoncz prace?
 }
 
 
-void clientValidation(int newClientFd){ //TODO: obsługa tego ze ten sam login !!!
+void clientValidation(int newClientFd){
 
     std::cout << "WERYFIKACJA KLIENTA - fd: " << newClientFd << std::endl;
     //TODO: Czy sprawdzać port klienta?
@@ -378,7 +403,9 @@ void clientValidation(int newClientFd){ //TODO: obsługa tego ze ten sam login !
 
     if(cT == signup){
         if (searchForUserData(loginS, passwordS, true)) {
+        	writeToFileMutex.lock();
             addUser(loginS, passwordS);
+            writeToFileMutex.unlock();
             userExists = true;
         } //else na koncu obejmuje jak nie przejdzie czyli AUTH-FAIL
     } else if (cT == signin){
@@ -443,16 +470,22 @@ void joinSession(int clientFd){
 	        perror("Join session read error 2.\n");
 	        return;
 	    }
-        if (playerSessions.empty() || playerSessions.size() < maxSessions) {
+
+	    playerSessionsMutex.lock();
+	    bool emptySessions = playerSessions.empty();
+	    int sessionSize = playerSessions.size();
+	    playerSessionsMutex.unlock();
+
+        if ( emptySessions || (sessionSize < maxSessions) ) {
         	
         	strcpy(msg, "SESSION-GOOD\0");
         	secondMsg = true;
-        	if (playerSessions.empty()){
+        	if ( emptySessions ){
 	            finalSessionId = 1;
 		        strcpy(sessionId, "1\0");       
         	} 
-        	else if (playerSessions.size() < maxSessions )   {
-	            finalSessionId = (int)playerSessions.size() + 1;
+        	else if ( sessionSize < maxSessions )   {
+	            finalSessionId = (int) sessionSize + 1;
 	            sprintf (sessionId, "%d", finalSessionId);
 	        }
 
@@ -462,19 +495,19 @@ void joinSession(int clientFd){
 	        playerFds.push_back(clientFd);
             playerSessionsMutex.lock();
             playerSessions.insert(std::pair<int, std::vector<Player>>(finalSessionId, playerVector));
+            playerSessionsMutex.unlock();
+            playerSessionsFdsMutex.lock();
             playerSessionsFds.insert(std::pair<int, std::vector<int>>(finalSessionId, playerFds));
+            playerSessionsFdsMutex.unlock();
+            sessionNamesMutex.lock();
             sessionNames.insert(std::pair<int, std::string>(finalSessionId, std::string(buf) ));
+            sessionNamesMutex.unlock();
 
             std::cout << "NAZWA SESJI WKLADANA WLASNIE = " << std::string(buf) << std::endl;
-            
+            sessionHostsMutex.lock();
             sessionHosts.insert(std::pair<int, std::string>(finalSessionId, nicker ));
-            std::cout << "nickox: " << nicker << std::endl;
-            for(auto &s : sessionHosts){
-                std::cout << "(JOIN SESSION) HOST_SESSION_ID: " <<  s.first << std::endl;  //FIXME: NICK JEST NULLEM!!!!!!!!!!!!!!!!!!
-                std::cout << "(JOIN SESSION) HOST NICK : " <<  s.second << std::endl;
-            }
+			sessionHostsMutex.unlock();
 
-            playerSessionsMutex.unlock();
             memset(buf, 0, sizeof(buf));
 		} else {            //error nie mozna zrobic sesji;
             strcpy(msg, "SESSION-MAX\0");
@@ -519,15 +552,17 @@ void joinSession(int clientFd){
 void sendSessionData(int clientSocket){ 
 	char data[2048]; //is it enough			
 	memset(data, 0, sizeof(data));
-    if (playerSessions.size() > 0){
+
+    playerSessionsMutex.lock();
+    int sessionSize = layerSessions.size();
+    if ( sessionSize > 0){
   		char num[10];
-        sprintf (num, "%d", playerSessions.size());
+        sprintf (num, "%d", sessionSize );
         strcpy(data, num);
       	strcat(data, ":");
     } else {
     	strcpy(data, "NO-SESSIONS");
     }
-    playerSessionsMutex.lock();
     for( auto const& [key, val] : playerSessions) {
         int sessionID = key;
         char num[10];
@@ -563,13 +598,18 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
     	strValue << pch;
 		strValue >> sID; //convert to int
     }
+    playerSessionsMutex.lock(); //=================================================================================MUTEX-NEW!
   	std::vector<Player> players = playerSessions[sID];
+  	playerSessionsMutex.unlock(); //=================================================================================MUTEX-NEW!
+
     if (players.size() > 0 ){   
 	    char num[10];
 	    sprintf (num, "%d", players.size());
 	    strcpy(data, num);
 	    strcat(data,":");
-	    std::string host = sessionHosts[sID];
+	    sessionHostsMutex.lock(); //=================================================================================MUTEX-NEW!
+	    std::string host = sessionHosts[sID]; 
+	    sessionHostsMutex.unlock(); //=================================================================================MUTEX-NEW!
 	    strcat(data, host.c_str());
 	    strcat(data, ",");
 	    for (auto & element : players) {
@@ -597,37 +637,53 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     std::set<std::string> usedWords{};
     const unsigned int rounds = 5;
 
+    sessionHostsMutex.lock();
     sessionHosts.erase(sessionID); // USUWANIE HOSTA PO STARCIE RUNDY!
+	sessionHostsMutex.unlock();
 
     for (int i = 0; i < rounds; i++) {
 
-
         char startMsg[50];
+
+        playerSessionsMutex.lock();
         std::vector<Player> players = playerSessions[sessionID];
+        playerSessionsMutex.unlock();
+
         if (players.size() < 2) {
 
             if (players.size() == 1) {
+            	playerSessionsFdsMutex.lock();
                 int playerFd = playerSessionsFds[sessionID][0];
+                playerSessionsFdsMutex.unlock();
                 strcpy(startMsg, "SESSION-TIMEOUT\0");
                 writeData(playerFd, startMsg, sizeof(startMsg));
             }
             std::this_thread::sleep_for(std::chrono::seconds(10));
+			
+			playerSessionsMutex.lock();
             players = playerSessions[sessionID];
+            playerSessionsMutex.unlock();
+
             if (players.size() < 2) {
-                playerSessionsMutex.lock();
 
                 if (players.size() == 1) { //TODO czy temu jednemu jeszcze wynik wysłać??
+                    playerSessionsFdsMutex.lock();
                     int playerFd = playerSessionsFds[sessionID][0];
+                    playerSessionsFdsMutex.unlock();
                     strcpy(startMsg, "SESSION-KILL\0");
                     writeData(playerFd, startMsg, sizeof(startMsg));
                 }
-                sessionHosts.erase(sessionID);
-                std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+                //sessionHosts.erase(sessionID);
+				sessionNamesMutex.lock();
                 sessionNames.erase(sessionID);
-                std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+                sessionNamesMutex.unlock();
+                playerSessionsMutex.lock();
                 playerSessions.erase(sessionID);
-                playerSessionsFds.erase(sessionID);
                 playerSessionsMutex.unlock();
+                playerSessionsFdsMutex.lock();
+                playerSessionsFds.erase(sessionID);
+                playerSessionsFdsMutex.lock();
+               
                 // koniec sesji
                 return;
             }
@@ -635,6 +691,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
         std::map<std::string, int> currentPlayersFd{};
 
+        clientMapMutex.lock();
         for (auto &p : players) {
             int keyFd = 0;
             for (auto &playerPair : clientMap) {
@@ -646,20 +703,23 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
             playerPoints.insert(std::pair<std::string, int>(p.getNick(), 0)); //TODO: obczaj czy ok
         }
+        clientMapMutex.unlock();
 
         // na początku rundy komunikat runda ok
 
+        playerSessionsFdsMutex.lock();
         for(auto &pFd: currentPlayersFd){
             strcpy(startMsg, "ROUND-START\0");
             writeData(pFd.second, startMsg, sizeof(startMsg));
         }
+        playerSessionsFdsMutex.unlock();
 
         std::map<std::string, double> winners{};
         bool closing = false;
         std::string randomWord;
 
         while (true) {
-            randomWord = getRandomWord();
+            randomWord = getRandomWord(); // MUTEX-NEW????????????????????????????????????????
             auto it = usedWords.find(randomWord);
             if (it == usedWords.end()) {
                 usedWords.insert(randomWord);
@@ -668,12 +728,14 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         }
 
         //Wyślij każdemu graczowi słowo.
+        playerSessionsFdsMutex.lock();
         for (auto &p : currentPlayersFd) {
             char buf[100];
             strcpy(buf, randomWord.c_str());
             strcat(buf, "\0");
             writeData(p.second, buf, sizeof(buf));
         }
+        playerSessionsFdsMutex.unlock();
 
         auto start = std::chrono::steady_clock::now();     // start timer
         double roundTime = 120.0 + 10.0; //2 minuty na rundę TODO: plus przesył laggi??
@@ -682,6 +744,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             auto time_span = static_cast<std::chrono::duration<double>>(end - start);
 
             //TODO: nie blokujaca sprawdz po kazdym czy jest jakis wynik;
+            playerSessionsFdsMutex.lock();
             for (auto &p : currentPlayersFd) {
                 int keyFd = p.second;
                 std::string player = p.first;
@@ -694,8 +757,11 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                     }
                     double time = strtod(winner_buf, nullptr);
                     winners.insert(std::pair<std::string, double>(player, time));
-                }
+                } else {
+                	//TODO: WYRZUC GRACZA
+                } 
             }
+            playerSessionsFdsMutex.unlock();
             if (time_span.count() > roundTime) {
                 break;
             }
@@ -733,6 +799,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             }
         }
         //TODO: teraz wyslij wiadomosc, srpwdza czy jeszcze sa gracze co byli
+        playerSessionsFdsMutex.lock();
         for (auto &send: currentPlayersFd) {
             std::vector<int> vecFd = playerSessionsFds[sessionID];
             for(auto& i: vecFd){
@@ -741,6 +808,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                 }
             }
         }
+        playerSessionsFdsMutex.unlock();
 
         if(i == rounds - 2){
             int maxScore = -9999;
@@ -776,6 +844,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     }
 
     char check[10];
+    playerSessionsFdsMutex.lock();
     for (auto &p: playerSessionsFds[sessionID]) {
         //TODO problematyczne bo usuwanie nie dzialajacych w loopie auto??
         /*
@@ -791,20 +860,25 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             }
         }
     }
-    playerSessionsMutex.lock();
     for (auto &p: playerSessionsFds[sessionID]) {
         addToEpoll(p);
     }
     //Dodaj do epolla
  	std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+ 	sessionNamesMutex.lock();
     sessionNames.erase(sessionID);
+    sessionNamesMutex.unlock();
     std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
 
-
+    playerSessionsMutex.lock();
     playerSessions.erase(sessionID);
-    playerSessionsFds.erase(sessionID);
-    //Wyrzuć z sesji
     playerSessionsMutex.unlock();
+    playerSessionsFdsMutex.lock();
+    playerSessionsFds.erase(sessionID);
+    playerSessionsFdsMutex.unlock();
+    
+    //Wyrzuć z sesji
+
 
     // TODO COS TAKIEGO ZE READUJE NON BLOCKIEM PO KAZDYM CURRENT PLAYER ZOBACYZC CZY ZWROCI 0  JAK TAK TO WYWAL Z GRY
 
@@ -921,56 +995,81 @@ void writeData(int fd, char * buffer, ssize_t count){
 
 
 void handlePlayerExit(int clientFd){
+
+	clientMapMutex.lock(); //==================MUTEX-NEW!
+
+	std::cout << "Handle (rozmiar mapy)przed = " << clientMap.size() << std::endl; 
+
 	std::string playerNick = clientMap[clientFd].getNick();
 
-	std::cout << "Handle (player nick) = " << playerNick << std::endl; //FIXME: NICK PUSTY!!!!!!!!!!!!!!!!!!!!!
+	clientMapMutex.unlock();
 
-        int session = 0;
-        bool findEnd= false;
-        for (auto & fds: playerSessionsFds){
-      		session = fds.first;
-        	for (auto &f: fds.second){
-        		if(f == clientFd){
-        			findEnd=true;
-        			break;
-        		}
-        	}
-        	if (findEnd){
-        		break;
-        	}
-        }
+	std::cout << "Handle (player nick)1 = " << playerNick << std::endl; //FIXME: NICK PUSTY!!!!!!!!!!!!!!!!!!!!!
 
-        std::cout << "Handle (Session id) = " << session << std::endl;
+	
+	playerSessionsFdsMutex.lock();
 
+    int session = 0;
+    bool findEnd= false;
+    for (auto & fds: playerSessionsFds){
+  		session = fds.first;
+    	for (auto &f: fds.second){
+    		if(f == clientFd){
+    			findEnd=true;
+    			break;
+    		}
+    	}
+    	if (findEnd){
+    		break;
+    	}
+    }
+
+    playerSessionsFdsMutex.unlock();
+
+    std::cout << "Handle (Session id) = " << session << std::endl;
+
+
+	sessionHostsMutex.lock();
+    int isHost = sessionHosts.count(session)
+    sessionHostsMutex.unlock();
+    
+    if ( isHost != 0){ // jesli jest hostem sesji to usuń sesje
+    	std::cout << "Handle (host usuwa sesje)!" << std::endl;
+  	    playerSessionsMutex.lock();
+    	playerSessions.erase(session);
+    	playerSessionsMutex.unlock();
+    	playerSessionsFdsMutex.lock();
+    	playerSessionsFds.erase(session);
+    	playerSessionsFdsMutex.unlock();
+    	std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+    	sessionNamesMutex.lock();
+	    sessionNames.erase(session);
+	    sessionNamesMutex.unlock();
+	    std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
+		sessionHostsMutex.lock();
+    	sessionHosts.erase(session);
+    	sessionHostsMutex.unlock();
+    } else {                                //jesli to nie to wyrzuc z sesji
+        std::cout << "Handle (host nie usuwa sesji!)" << std::endl; 
         playerSessionsMutex.lock();
-        
-        if (sessionHosts.count(session) != 0){ // jesli jest hostem sesji to usuń sesje
-        	std::cout << "Handle (host usuwa sesje)!" << std::endl;
-        	playerSessions.erase(session);
-        	playerSessionsFds.erase(session);
-        	std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
-		    sessionNames.erase(session);
-		    std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
-
-        	sessionHosts.erase(session);
-        } else {                                //jesli to nie to wyrzuc z sesji
-            std::cout << "Handle (host nie usuwa sesji!)" << std::endl; 
-            for(auto &s: playerSessions) {
-                auto it = s.second.begin();
-                while (it != s.second.end()) {
-                    if (it->getNick() == playerNick) {
-                        it = s.second.erase(it);
-                    } else {
-                        ++it;
-                    }
+        for(auto &s: playerSessions) {
+            auto it = s.second.begin();
+            while (it != s.second.end()) {
+                if (it->getNick() == playerNick) {
+                    it = s.second.erase(it);
+                } else {
+                    ++it;
                 }
             }
-            for(auto &fds: playerSessionsFds){
-                std::vector<int> vec = fds.second;
-                vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
-            }
-    	}
-    	playerSessionsMutex.unlock();
+        }
+        playerSessionsMutex.unlock();
+        playerSessionsFdsMutex.lock();
+        for(auto &fds: playerSessionsFds){
+            std::vector<int> vec = fds.second;
+            vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
+        }
+        playerSessionsFdsMutex.unlock();
+	}
 }
 
 

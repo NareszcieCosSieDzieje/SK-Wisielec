@@ -356,3 +356,11 @@ void MainWindow::on_pushButtonLeave_clicked()
     client->isHost = false;
     moveToSessionsPage();
 }
+
+void MainWindow::closeOnMaxPlayers() {
+
+    QMessageBox msgBox;
+    msgBox.setText("Sorry, server is overloaded. Ty again later.");
+    msgBox.exec();
+    close();
+}

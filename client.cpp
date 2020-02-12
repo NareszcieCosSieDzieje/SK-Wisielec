@@ -33,11 +33,20 @@ void Client::init(){
     bindAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     startClient();
     startConnection();
-    while (connected) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    char msg[20];
+    readData(clientFd, msg, sizeof(msg));
+    cout << "msg read 20" << msg << endl;
+    if (strcmp("SERVER-OK\0", msg) == 0) {
+        while (connected) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+        std::cout << "Out of main loop" << std::endl;
+        closeClient();
+    } else if (strcmp("SERVER-MAX\0", msg) == 0) {
+        cout << "session max" << endl;
+        closeClient();
+        GUI->closeOnMaxPlayers();
     }
-    std::cout << "Out of main loop" << std::endl;
-    closeClient();
     return;
 }
 

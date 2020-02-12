@@ -554,7 +554,7 @@ void sendSessionData(int clientSocket){
 	memset(data, 0, sizeof(data));
 
     playerSessionsMutex.lock();
-    int sessionSize = layerSessions.size();
+    int sessionSize = playerSessions.size();
     if ( sessionSize > 0){
   		char num[10];
         sprintf (num, "%d", sessionSize );
@@ -1030,7 +1030,7 @@ void handlePlayerExit(int clientFd){
 
 
 	sessionHostsMutex.lock();
-    int isHost = sessionHosts.count(session)
+    int isHost = sessionHosts.count(session);
     sessionHostsMutex.unlock();
     
     if ( isHost != 0){ // jesli jest hostem sesji to usuń sesje

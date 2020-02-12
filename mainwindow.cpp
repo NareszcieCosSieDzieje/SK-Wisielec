@@ -28,6 +28,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 {
+    cout << "setSession" << endl;
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     if (ui->tableOfServers->verticalHeader()->count()) {
         if (!model->removeRows(0, ui->tableOfServers->verticalHeader()->count())) {
@@ -35,14 +36,17 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
             cout << "ERROR: error during clearing the table" << endl;
         }
     }
+    cout << "setSession" << endl;
     int i = 0;
     for( auto const& [key, val] : sessions) {
+        cout << "i = " << i << endl;
         string name = val.first;
         string host = val.second;
         model->setItem(i, 0, new QStandardItem(QString::fromStdString(name)));
         model->setItem(i, 1, new QStandardItem(QString::fromStdString(host)));
         i++;
     }
+    cout << "setSession" << endl;
 }
 
 void MainWindow::setPlayers(std::vector<string> players)
@@ -121,6 +125,7 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
     QMessageBox msgBox;
     switch(client->goToSession(id)) {
     case SessionMessage::JOINED:
+        setButtonEnabled(ui->pushButtonStart, false);
         moveToSessionPage();
         break;
     case SessionMessage::BUSY:
@@ -187,6 +192,7 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
     QMessageBox msgBox;
     switch(client->createSession()) {
     case SessionMessage::CREATED:
+        setButtonEnabled(ui->pushButtonStart, true);
         moveToSessionPage();
         break;
     case SessionMessage::MAX:
@@ -217,12 +223,16 @@ void MainWindow::lettersSetEnabled(bool isEnabled)
     QObjectList buttons = ui->groupBoxLetters->children();
     for (int i = 0; i < 26; ++i) {
         QAbstractButton *ptr = qobject_cast<QAbstractButton*>(buttons[i]);
-        ptr->setEnabled(isEnabled);
-        if (isEnabled) {
-            ptr->setStyleSheet("background-color: rgb(68, 10, 10); color: rgb(243, 243, 243)");
-        } else {
-            ptr->setStyleSheet("background-color: rgb(30, 4, 4); color: rgb(140, 140, 140)");
-        }
+        setButtonEnabled(ptr, isEnabled);
+    }
+}
+
+void MainWindow::setButtonEnabled(QAbstractButton * button, bool enabled) {
+    button->setEnabled(enabled);
+    if (enabled) {
+        button->setStyleSheet("background-color: rgb(68, 10, 10); color: rgb(243, 243, 243)");
+    } else {
+        button->setStyleSheet("background-color: rgb(30, 4, 4); color: rgb(140, 140, 140)");
     }
 }
 
@@ -345,7 +355,8 @@ void MainWindow::on_pushButtonLogout_clicked()
 
 void MainWindow::closeEvent (QCloseEvent *event)
 {
-    client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
+    if (connectionApproved)
+        client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
     event->accept();
 }
 
@@ -358,7 +369,7 @@ void MainWindow::on_pushButtonLeave_clicked()
 }
 
 void MainWindow::closeOnMaxPlayers() {
-
+    connectionApproved = false;
     QMessageBox msgBox;
     msgBox.setText("Sorry, server is overloaded. Ty again later.");
     msgBox.exec();

@@ -62,7 +62,7 @@ sockaddr_in bindAddr {
 
 int maxSessions = 2; //TODO: ile sesji?
 int playersPerSession = 4;
-const int maxEvents = /maxSessions * playersPerSession;
+const int maxEvents = 2;//maxSessions * playersPerSession;
 
 std::atomic<bool> SERVER_SHUT_DOWN(false);
 
@@ -346,9 +346,10 @@ void listenLoop(void){
 
         clientSocketsMutex.lock();
         int sockets = clientSockets.size();
+        std::cout << "LISTEN SOCKETY = " << sockets << std::endl;
         clientSocketsMutex.unlock();
         char msg[20];
-        if (sockets == maxEvents){
+        if (sockets == maxEvents) {
         	strcpy(msg, "SERVER-MAX\0");
         	writeData(newClient, msg, sizeof(msg));
         	stopConnection(newClient);
@@ -950,7 +951,7 @@ void stopConnection(int ClientFd){
     playerSessionsMutex.unlock();
     */
     clientSocketsMutex.lock();
-    clientSockets.push_back(ClientFd);
+    clientSockets.erase(std::remove(clientSockets.begin(), clientSockets.end(), ClientFd), clientSockets.end());
     clientSocketsMutex.unlock();
 
     clientMapMutex.lock();

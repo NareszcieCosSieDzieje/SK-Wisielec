@@ -29,9 +29,14 @@ MainWindow::~MainWindow()
 void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 {
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
+    if (ui->tableOfServers->verticalHeader()->count()) {
+        if (!model->removeRows(0, ui->tableOfServers->verticalHeader()->count())) {
+            cout << "RowCount() = " << ui->tableOfServers->verticalHeader()->count() << endl;
+            cout << "ERROR: error during clearing the table" << endl;
+        }
+    }
     int i = 0;
     for( auto const& [key, val] : sessions) {
-        int sessionID = key;
         string name = val.first;
         string host = val.second;
         model->setItem(i, 0, new QStandardItem(QString::fromStdString(name)));
@@ -43,18 +48,22 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 void MainWindow::setPlayers(std::vector<string> players)
 {
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
+    if (ui->tableOfPlayers->verticalHeader()->count()) {
+        if (!model->removeRows(0, ui->tableOfPlayers->verticalHeader()->count())) {
+            cout << "RowCount() = " << ui->tableOfServers->verticalHeader()->count() << endl;
+            cout << "ERROR: error during clearing the table" << endl;
+        }
+    }
     int i = 0;
     for( std::string player : players) {
-        cout << "PETLA -----------" << endl;
         cout << i << ": " << player << endl;
         model->setItem(i, 0, new QStandardItem(QString::fromStdString(player)));
-        if ((client->isHost) && (client->login == player)) {
-            model->setItem(i, 1, new QStandardItem("Host"));
-        } else {
+        if (i) {
             model->setItem(i, 1, new QStandardItem("Player"));
+        } else {
+            model->setItem(i, 1, new QStandardItem("Host"));
         }
         i++;
-        cout << "-----------------" << endl;
     }
 }
 
@@ -344,5 +353,6 @@ void MainWindow::on_pushButtonLeave_clicked()
 {
     client->killGettingDataProcess();
     client->activateConnectionProcess(ConnectionProcesses::SESSION_OUT);
+    client->isHost = false;
     moveToSessionsPage();
 }

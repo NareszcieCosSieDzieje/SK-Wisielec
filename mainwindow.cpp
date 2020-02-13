@@ -28,7 +28,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 {
-    cout << "setSession" << endl;
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     if (ui->tableOfServers->verticalHeader()->count()) {
         if (!model->removeRows(0, ui->tableOfServers->verticalHeader()->count())) {
@@ -36,7 +35,6 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
             cout << "ERROR: error during clearing the table" << endl;
         }
     }
-    cout << "setSession" << endl;
     int i = 0;
     for( auto const& [key, val] : sessions) {
         cout << "i = " << i << endl;
@@ -46,7 +44,6 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
         model->setItem(i, 1, new QStandardItem(QString::fromStdString(host)));
         i++;
     }
-    cout << "setSession" << endl;
 }
 
 void MainWindow::setPlayers(std::vector<string> players)
@@ -111,7 +108,6 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
 {
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     std::string host = model->item(index.row(), 1)->text().toStdString();
-    cout << "host: " << host << endl;
     int id;
     for(auto &elem : *(client->availableSessions)) {
         if (elem.second.second == host) {
@@ -119,9 +115,8 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
             break;
         }
     }
-    cout << "id: " << id << endl;
     std::cout << "JOINING SERVER" << std::endl;
-    client->killGettingDataProcess();
+    client->gettingDataThread->stopGettingData();
     QMessageBox msgBox;
     switch(client->goToSession(id)) {
     case SessionMessage::JOINED:
@@ -131,22 +126,22 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
     case SessionMessage::BUSY:
         msgBox.setText("Sorry, this server is full");
         msgBox.exec();
-        client->runDataGetter();
+        client->gettingDataThread->start();
         break;
     case SessionMessage::KILLED:
         msgBox.setText("Sorry, the server doesn't exist");
         msgBox.exec();
-        client->runDataGetter();
+        client->gettingDataThread->start();
         break;
     case SessionMessage::SESSION_ERROR:
         msgBox.setText("Ow, something went wrong. Please try again later.");
         msgBox.exec();
-        client->runDataGetter();
+        client->gettingDataThread->start();
         break;
     case SessionMessage::MAX:
         msgBox.setText("Ow, something went wrong. Please try again later.");
         msgBox.exec();
-        client->runDataGetter();
+        client->gettingDataThread->start();
         break;
     }
 }
@@ -188,7 +183,7 @@ void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
     std::cout << "CREATING SERVER" << std::endl;
-    client->killGettingDataProcess();
+    client->gettingDataThread->stopGettingData();
     QMessageBox msgBox;
     switch(client->createSession()) {
     case SessionMessage::CREATED:
@@ -214,8 +209,8 @@ void MainWindow::moveToSessionPage() {
     ui->tableOfPlayers->verticalHeader()->hide();
     ui->labelSrvName->setText(ui->lineEditSrvName->text());
     ui->pages->setCurrentWidget(ui->pageWaitingRoom);
-    client->gettingDataType = GettingDataType::Players;
-    client->runDataGetter();
+    client->gettingDataThread->gettingDataType = GettingDataType::Players;
+    client->gettingDataThread->start();
 }
 
 void MainWindow::lettersSetEnabled(bool isEnabled)
@@ -332,8 +327,9 @@ void MainWindow::moveToSessionsPage() {
     model->setHorizontalHeaderItem(0, new QStandardItem("Server name"));
     model->setHorizontalHeaderItem(1, new QStandardItem("Host"));
     ui->tableOfServers->setModel(model);
-    client->gettingDataType = GettingDataType::Sessions;
-    client->runDataGetter();
+    client->gettingDataThread->gettingDataType = GettingDataType::Sessions;
+    client->gettingDataThread->start();
+    cout << "po run() ========================================================================" << endl;
 }
 
 void MainWindow::on_pushButtonBackToSessions_clicked()
@@ -348,7 +344,7 @@ void MainWindow::on_pushButtonBackToLogin_clicked()
 
 void MainWindow::on_pushButtonLogout_clicked()
 {
-    client->killGettingDataProcess();
+    client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::LOGOUT);
     ui->pages->setCurrentWidget(ui->pageLogin);
 }
@@ -362,9 +358,8 @@ void MainWindow::closeEvent (QCloseEvent *event)
 
 void MainWindow::on_pushButtonLeave_clicked()
 {
-    client->killGettingDataProcess();
+    client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::SESSION_OUT);
-    client->isHost = false;
     moveToSessionsPage();
 }
 

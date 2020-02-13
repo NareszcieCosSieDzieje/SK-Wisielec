@@ -14,6 +14,8 @@ QT_END_NAMESPACE
 
 using namespace std;
 
+class Client;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT

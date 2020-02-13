@@ -145,12 +145,53 @@ int main(int argc, char* argv[]){
            
            // std::cout << << std::endl;
 			
+            
+
+            clientMapMutex.lock();
+            std::cout << "\n----------------(W EPOLLU!)---------------------\nClient map: "<< std::endl;
+            for(auto &a: clientMap){
+                std::cout << "ID gracza = " << a.first << std::endl; 
+                std::cout << "Nick gracza = " << a.second.getNick() << std::endl;
+            }
+            clientMapMutex.unlock();
+            playerSessionsMutex.lock();
+            std::cout << "\nPlayer sessions: "<< std::endl;
+            for(auto &a: playerSessions){
+                std::cout << "ID sesji = " << a.first << std::endl; 
+                for(auto &b : a.second){
+                    std::cout << "Nick gracza = " << b.getNick() << std::endl;  
+                }
+            }
+            playerSessionsMutex.unlock();
+            playerSessionsFdsMutex.lock();
+            std::cout << "\nPlayer sessions FDS: "<< std::endl;
+            for(auto &a: playerSessionsFds){
+                std::cout << "ID sesji = " << a.first << std::endl; 
+                for(auto &b : a.second){
+                    std::cout << "deskryptor gracza = " << b << std::endl;  
+                }
+            }
+            playerSessionsFdsMutex.unlock();
+            sessionHostsMutex.lock();
+            std::cout << "\nHOSTOWIE SESJI: "<< std::endl;
+            for(auto &a: sessionHosts){
+                std::cout << "ID sesji = " << a.first << std::endl; 
+                std::cout << "Host nick = " << a.second << std::endl;
+            }
+            sessionHostsMutex.unlock();
+            sessionNamesMutex.lock();
+            std::cout << "\nNAZWY SESJI: "<< std::endl;
+            for(auto &a: sessionNames){
+                std::cout << "ID sesji = " << a.first << std::endl; 
+                std::cout << "Nazwa sesji = " << a.second << std::endl;
+            }
+            sessionNamesMutex.unlock();
+            
+
+            std::cout << "\nDeskryptor w epollu fd = " << clientFd << "\t Dane = " << msg << std::endl;
 			
             if(ret == 0){
-                //polling = false;
-                //handlePlayerExit(clientFd);
-                removeFromEpoll(clientFd);
-                stopConnection(clientFd);
+                //usuwany
                 continue;
             }
             if ( strcmp(msg, "CLIENT-VALIDATION\0") == 0){
@@ -164,11 +205,13 @@ int main(int argc, char* argv[]){
 				sendUserData(clientFd, msg);
             }
             else if( strcmp(msg, "JOIN-SESSION\0") == 0){
+                std::cout << "JOIN SESSION" << std::endl;
+
                 removeFromEpoll(clientFd);
                 std::thread jS(joinSession, clientFd);
                 jS.detach(); //TODO: obczaj czy ok
             } else if (strcmp(msg, "START-SESSION\0") == 0){
-
+                std::cout << "START-SESSION" << std::endl;
                 int session = 0;
                 char msg[100];
 
@@ -212,15 +255,17 @@ int main(int argc, char* argv[]){
                 }
             } else if (strcmp(msg, "DISSOCIATE-SESSION\0") == 0) {
             	//Wyjdz przed startem sesji
+                std::cout << "DISSOCIATE-SESSION" << std::endl;
             	handlePlayerExit(clientFd);
             }
             else if( strcmp(msg, "DISCONNECTING\0") == 0){
-                
+                std::cout << "DISCONNECTING" << std::endl;
                 removeFromEpoll(clientFd);
                 //handlePlayerExit(clientFd); //FIXME: nowe obczaj czy ok!
                 stopConnection(clientFd);
             }
             else if ( strcmp(msg,"LOG-OUT\0") == 0){
+                std::cout << "LOG-OUT" << std::endl;
             	handlePlayerExit(clientFd);
                 clientMapMutex.lock();
                 clientMap.erase(clientFd);
@@ -332,8 +377,6 @@ void listenLoop(void){
 
 
 void clientValidation(int newClientFd){
-
-    std::cout << "WERYFIKACJA KLIENTA - fd: " << newClientFd << std::endl;
     //TODO: Czy sprawdzać port klienta?
 
     const unsigned int signin = 1;
@@ -383,7 +426,6 @@ void clientValidation(int newClientFd){
     } else if (cT == signin){
     	bool loggedIn = false;
     	for(auto &c: clientMap){ // jesli juz zalogowany na dany nick
-    		std::cout<<"clientMap.first = " << c.first << "\tclientMap.second (nick) = " << c.second.getNick() << std::endl;
     		if (c.second.getNick() == loginS){
 				loggedIn = true;
     		}
@@ -423,7 +465,7 @@ void joinSession(int clientFd){
     char msg[100];
     char sessionId[20];
     int ret = readData(clientFd, sessionId, sizeof(sessionId)); // int read = recv(clientFd, sessionId, sizeof(sessionId), MSG_DONTWAIT); 
-    std::cout << "======================>SESSION ID WYSLANE W JOIN SESSION =>>>>>>>> " << sessionId << std::endl;
+    std::cout << "======================> (JOIN_SESSION) READ 1, SessionID = " << sessionId << "\n ret = " << ret << std::endl;
     if(ret != 20){
         perror("Join session read error 1.\n");
         return;
@@ -475,8 +517,6 @@ void joinSession(int clientFd){
             sessionNamesMutex.lock();
             sessionNames.insert(std::pair<int, std::string>(finalSessionId, std::string(buf) ));
             sessionNamesMutex.unlock();
-
-            std::cout << "NAZWA SESJI WKLADANA WLASNIE = " << std::string(buf) << std::endl;
             sessionHostsMutex.lock();
             sessionHosts.insert(std::pair<int, std::string>(finalSessionId, nicker ));
 			sessionHostsMutex.unlock();
@@ -490,11 +530,9 @@ void joinSession(int clientFd){
         	writeData(clientFd, sessionId, sizeof(sessionId)); 
         }
     } else {
-    	std::cout << " WSZEDL W DOLACZENIE DO SESJI " << std::endl;
         playerSessionsMutex.lock();
         if (playerSessions.count(sessionMode) != 1){ //Jak nie ma klucza
             strcpy(msg, "SESSION-KILLED\0"); 
-        	std::cout << " DOLACZANIE SESSION KILL  " << std::endl;
         }
         else {
         	if (playerSessions[sessionMode].size() < playersPerSession){
@@ -505,18 +543,15 @@ void joinSession(int clientFd){
                 playerSessionsFdsMutex.unlock();
 
 	            sprintf (sessionId, "%d", sessionMode);
-	            std::cout << " DOLACZANIE SESSION GOOD " << std::endl;
 	            strcpy(msg, "SESSION-GOOD\0");
 	            //strcat(msg, "\0");
 	            secondMsg = true;
             } else {
                 strcpy(msg, "SESSION-BUSY\0");
-                std::cout << " DOLACZANIE SESSION BUSY " << std::endl;
             }
         }
         playerSessionsMutex.unlock();
         writeData(clientFd, msg, sizeof(msg));
-        std::cout << " DOLACZANIE WYSLAL DANE " << std::endl;
         if (secondMsg){
         	writeData(clientFd, sessionId, sizeof(sessionId)); 
         }
@@ -532,13 +567,11 @@ void sendSessionData(int clientSocket){
 
     playerSessionsMutex.lock();
     int sessionSize = playerSessions.size();
-    std::cout << "sessionSize1 = " << sessionSize << std::endl;
     if ( sessionSize > 0){
   		char num[10];
         sprintf (num, "%d", sessionSize );
         strcpy(data, num);
       	strcat(data, ":");
-         std::cout << "sessionSize2 = " << sessionSize << std::endl;
         for( auto const& [key, val] : playerSessions) {
             int sessionID = key;
             char num[10];
@@ -550,14 +583,12 @@ void sendSessionData(int clientSocket){
             strcat(data, sessionHosts[sessionID].c_str()); //NICK HOSTA
             //std::cout << "sessionHosts[sessionID]: " << sessionHosts[sessionID].c_str() << std::endl;
             strcat(data, ";");
-             std::cout << "sessionSize3 = " << sessionSize << std::endl;
         }
     } else {
     	strcpy(data, "NO-SESSIONS");
     }
     playerSessionsMutex.unlock();
     strcat(data, "\0");
-    std::cout << "sessionSize4 = " << sessionSize << "===========================================> DANE w  sendSessionData: " << data << std::endl;
     writeData(clientSocket, data, sizeof(data));
 }
 
@@ -899,7 +930,8 @@ void addToEpoll(int fd){
 
 void removeFromEpoll(int fd){
     if ( epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, nullptr) < 0 ){
-        perror("Server failed to delete clientfd from epoll.\n");
+        perror("Server failed to delete clientfd from epoll.\t");
+        printf("%s\n", strerror(errno));
         //close(epollFd);
         //exit(EPOLL_REMOVE);
     }
@@ -931,9 +963,9 @@ void stopConnection(int ClientFd){
 
     
     clientMapMutex.lock();
-        if (clientMap.count(ClientFd) == 1){
-            clientMap.erase(ClientFd);
-        }
+    if (clientMap.count(ClientFd) == 1){
+        clientMap.erase(ClientFd);
+    }
     clientMapMutex.unlock();
 
     clientSocketsMutex.lock();
@@ -942,7 +974,8 @@ void stopConnection(int ClientFd){
 
 
     if (shutdown(ClientFd, SHUT_RDWR) < 0 ){
-        perror("Failed to disconnect with the client.\n");
+        perror("Failed to disconnect with the client.");
+        printf("%s\n", strerror(errno));
         //FIXME: exit?
     }
     close(ClientFd);
@@ -952,7 +985,7 @@ void stopConnection(int ClientFd){
 
 //TODO: HANDLE ZAMKNIECIE
 void sigHandler(int signal){
-    printf("CTRL + C\n");
+    printf(" = CTRL + C\n");
 
     shutdown(serverFd, SHUT_RDWR);
     close(serverFd);
@@ -970,7 +1003,7 @@ ssize_t readData(int fd, char * buffer, ssize_t buffsize){
     if(ret == 0){
         //CLOSE CONNECTION WITH CLIENT
         clientMapMutex.lock();
-        std::cout << "!!---!_!_!_!_!_!_!______Read ZERO ON:\nFD: " << fd << "\nNICK: " << clientMap[fd].getNick() << std::endl;
+        std::cout << "\n================================Read_ZERO_ON_FD = " << fd << "\tNICK: " << clientMap[fd].getNick() << "<==============================\n" <<std::endl;
         clientMapMutex.unlock();
         stopConnection(fd);
     }
@@ -991,45 +1024,7 @@ void writeData(int fd, char * buffer, ssize_t count){
 
 void handlePlayerExit(int clientFd){
 
-
-    std::cout << "\n----------------(HANDLE PRZED USUNIECIEM)---------------------\nClient map: "<< std::endl;
-    for(auto &a: clientMap){
-        std::cout << "ID gracza = " << a.first << std::endl; 
-        std::cout << "Nick gracza = " << a.second.getNick() << std::endl;
-    }
- playerSessionsMutex.lock();
-    std::cout << "\nPlayer sessions: "<< std::endl;
-    for(auto &a: playerSessions){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        for(auto &b : a.second){
-            std::cout << "Nick gracza = " << b.getNick() << std::endl;  
-        }
-    } playerSessionsMutex.unlock();
-
-    std::cout << "\nPlayer sessions FDS: "<< std::endl;
-    for(auto &a: playerSessionsFds){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        for(auto &b : a.second){
-            std::cout << "deskryptor gracza = " << b << std::endl;  
-        }
-    }
-
-    std::cout << "\nHOSTOWIE SESJI: "<< std::endl;
-    for(auto &a: sessionHosts){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        std::cout << "Host nick = " << a.second << std::endl;
-    }
-    
-
-    std::cout << "\nNAZWY SESJI: "<< std::endl;
-    for(auto &a: sessionNames){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        std::cout << "Nazwa sesji = " << a.second << std::endl;
-    }
-
-
-
-	clientMapMutex.lock(); //==================MUTEX-NEW!
+	clientMapMutex.lock(); 
 	std::string playerNick = clientMap[clientFd].getNick();
 	clientMapMutex.unlock();
 
@@ -1053,16 +1048,17 @@ void handlePlayerExit(int clientFd){
     playerSessionsFdsMutex.unlock();
 
 	sessionHostsMutex.lock();    
-    //int isHost = sessionHosts.count(session);
-    std::string hostNick = sessionHosts[session]; 
+    std::string hostNick = "";
+    if (sessionHosts.count(session) == 1) {
+        hostNick = sessionHosts[session]; 
+    }
     sessionHostsMutex.unlock();
 
     bool isHost = (hostNick == playerNick);
 
-
     
     if ( isHost ){ // jesli jest hostem sesji to usuń sesje
-    	       std::cout << "Handle (host usuwa sesje)!" << std::endl;
+    	std::cout << "Handle (host usuwa sesje)!" << std::endl;
   	    playerSessionsMutex.lock();
     	playerSessions.erase(session);
     	playerSessionsMutex.unlock();
@@ -1070,15 +1066,12 @@ void handlePlayerExit(int clientFd){
     	playerSessionsFds.erase(session);
     	playerSessionsFdsMutex.unlock();
     	sessionNamesMutex.lock();
-                std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
 	    sessionNames.erase(session);
-                 std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
 	    sessionNamesMutex.unlock();
 		sessionHostsMutex.lock();
     	sessionHosts.erase(session);
     	sessionHostsMutex.unlock();
     } else {             
-        
         playerSessionsMutex.lock();
         if (playerSessions.count(session) == 1) {
             auto it = playerSessions[session].begin();
@@ -1103,44 +1096,7 @@ void handlePlayerExit(int clientFd){
 	}
 
 
-    std::cout << "\n----------------(HANDLE PO USUNIECU!)---------------------\nClient map: "<< std::endl;
-    for(auto &a: clientMap){
-        std::cout << "ID gracza = " << a.first << std::endl; 
-        std::cout << "Nick gracza = " << a.second.getNick() << std::endl;
-    }
-
-    playerSessionsMutex.lock();
-    std::cout << "\nPlayer sessions: "<< std::endl;
-    for(auto &a: playerSessions){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        for(auto &b : a.second){
-            std::cout << "Nick gracza = " << b.getNick() << std::endl;  
-        }
-    }
-    playerSessionsMutex.unlock();
-
-    std::cout << "\nPlayer sessions FDS: "<< std::endl;
-    for(auto &a: playerSessionsFds){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        for(auto &b : a.second){
-            std::cout << "deskryptor gracza = " << b << std::endl;  
-        }
-    }
-
-    std::cout << "\nHOSTOWIE SESJI: "<< std::endl;
-    for(auto &a: sessionHosts){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        std::cout << "Host nick = " << a.second << std::endl;
-    }
-    
-
-    std::cout << "\nNAZWY SESJI: "<< std::endl;
-    for(auto &a: sessionNames){
-        std::cout << "ID sesji = " << a.first << std::endl; 
-        std::cout << "Nazwa sesji = " << a.second << std::endl;
-    }
-
-
+  
 
 }
 

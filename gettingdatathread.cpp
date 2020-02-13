@@ -1,8 +1,9 @@
 #include "gettingdatathread.h"
+#include "mainwindow.h"
 
 #include "client.h"
 
-
+class MainWindow;
 
 GettingDataThread::GettingDataThread(Client *c)
 {
@@ -41,7 +42,7 @@ void GettingDataThread::run()
                 }
             }
             client->availableSessions = &sessions;
-            GUI->setSessions(sessions);
+            emit setSessionSig(sessions);
         } else if (gettingDataType == GettingDataType::Players) {
             char userDataProcess[sizeof(ConnectionProcesses::USER_DATA)];
             strcpy(userDataProcess, ConnectionProcesses::USER_DATA);
@@ -66,7 +67,7 @@ void GettingDataThread::run()
                     s = strtok(NULL, ",");
                     players.push_back(std::string(s));
                 }
-                GUI->setPlayers(players);
+                emit setPlayersSig(players);
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));

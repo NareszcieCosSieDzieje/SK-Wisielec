@@ -19,6 +19,10 @@ MainWindow::MainWindow(Client *cl, QWidget *parent)
     , client(cl)
 {
     ui->setupUi(this);
+    connect(client->gettingDataThread, SIGNAL(setSessionSig(std::map<int, std::pair<std::string, std::string>>)),
+            this, SLOT(setSessions(std::map<int, std::pair<std::string, std::string>>)));
+    connect(client->gettingDataThread, SIGNAL(setPlayersSig(std::vector<std::string>)),
+            this, SLOT(setPlayers(std::vector<std::string>)));
 }
 
 MainWindow::~MainWindow()

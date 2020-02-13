@@ -26,7 +26,7 @@ class MainWindow;
 
 Client::Client()
 {
-
+    gettingDataThread = new GettingDataThread(this);
 }
 
 void Client::init(){
@@ -37,7 +37,6 @@ void Client::init(){
     readData(clientFd, msg, sizeof(msg));
     cout << "msg read 20" << msg << endl;
     if (strcmp("SERVER-OK\0", msg) == 0) {
-        gettingDataThread = new GettingDataThread(this);
         while (connected) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }

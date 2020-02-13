@@ -19,6 +19,7 @@
 #include <qobjectdefs.h>
 #include <string.h>
 #include <QThread>
+#include <string>
 
 #include "statuses.hpp"
 #include "player.hpp"
@@ -43,6 +44,10 @@ public:
 
 public slots:
     void stopGettingData();
+
+signals:
+    void setSessionSig(std::map<int, std::pair<std::string, std::string>>);
+    void setPlayersSig(std::vector<std::string>);
 
 private:
     Client * client;

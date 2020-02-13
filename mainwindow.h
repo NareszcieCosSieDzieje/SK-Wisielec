@@ -23,12 +23,11 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(Client *cl, QWidget *parent = nullptr);
     ~MainWindow();
-    void setSessions(std::map<int, std::pair<string, string> > sessions);
-    void setPlayers(std::vector<string> players);
 
     string getSrvName();
     void closeOnMaxPlayers();
     void moveToSessionsPage();
+
 private slots:
     void on_pushButtonRegister_clicked();
 
@@ -53,6 +52,11 @@ private slots:
     void on_pushButtonLogout_clicked();
 
     void on_pushButtonLeave_clicked();
+
+    void setSessions(std::map<int, std::pair<std::string, std::string> > sessions);
+
+    void setPlayers(std::vector<std::string> players);
+
 
 private:
     Ui::MainWindow *ui;

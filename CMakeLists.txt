@@ -48,6 +48,8 @@ else()
     client.cpp
     client.h
     constants.h
+    gettingdatathread.cpp
+    gettingdatathread.h
   )
 endif()
 

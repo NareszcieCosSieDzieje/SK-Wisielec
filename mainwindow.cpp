@@ -238,16 +238,16 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
     case SessionMessage::CREATED:
         setButtonEnabled(ui->pushButtonStart, true);
         moveToSessionPage();
+        client->gettingDataThread->guiMutex.unlock();
+        client->gettingDataThread->connectionMutex.unlock();
         break;
     case SessionMessage::MAX:
         client->gettingDataThread->guiMutex.unlock();
+        client->gettingDataThread->connectionMutex.unlock();
         msgBox.setText("Sorry, too many servers are created");
         msgBox.exec();
         break;
     }
-    cout << "max message" << endl;
-    client->gettingDataThread->guiMutex.unlock();
-    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::moveToSessionPage() {

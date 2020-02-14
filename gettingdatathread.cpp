@@ -77,6 +77,6 @@ void GettingDataThread::run()
 
 void GettingDataThread::stopGettingData()
 {
-    connectionMutex.unlock();
     QThread::exit();
+    connectionMutex.unlock();
 }

@@ -91,10 +91,12 @@ void MainWindow::setPlayers(std::vector<string> players)
 
 void MainWindow::onHostLeave()
 {
+    client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     client->gettingDataThread->stopGettingData();
     moveToSessionsPage();
     client->gettingDataThread->guiMutex.unlock();
+    client->gettingDataThread->connectionMutex.unlock();
 }
 
 
@@ -142,6 +144,7 @@ void MainWindow::on_pushButtonLogin_clicked()
 
 void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
 {
+    client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     std::string host = model->item(index.row(), 1)->text().toStdString();
@@ -182,6 +185,7 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
         break;
     }
     client->gettingDataThread->guiMutex.unlock();
+    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::on_pushButtonSignup_clicked()

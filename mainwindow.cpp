@@ -36,7 +36,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
 
     QModelIndexList indexes = ui->tableOfServers->selectionModel()->selectedIndexes();
@@ -62,12 +62,12 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
     }
     if (selectedRow != -1)
         ui->tableOfServers->selectRow(selectedRow);
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::setPlayers(std::vector<string> players)
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
     if (ui->tableOfPlayers->verticalHeader()->count()) {
         if (!model->removeRows(0, ui->tableOfPlayers->verticalHeader()->count())) {
@@ -86,15 +86,15 @@ void MainWindow::setPlayers(std::vector<string> players)
         }
         i++;
     }
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::onHostLeave()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     client->gettingDataThread->stopGettingData();
     moveToSessionsPage();
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 
@@ -105,39 +105,44 @@ char *MainWindow::QStringToChar(QString qs) {
 
 void MainWindow::on_pushButtonRegister_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     ui->pages->setCurrentWidget(ui->pageRegister);
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::on_pushButtonLogin_clicked()
 {
-    client->gettingDataThread->mutex.lock();
-    char *login = QStringToChar(ui->lineEditLogin->text());
-    char *password = QStringToChar(ui->lineEditPwd->text());
     QMessageBox msgBox;
-    switch (client->authorize(login, password, AuthorizationType::SIGNIN)) {
-    case AuthorizationStatus::SUCCESSFUL: {
-        moveToSessionsPage();
-        break;
-    }
-    case AuthorizationStatus::FAILED: {
-        msgBox.setText("Login failed! Bad username or password.");
+    if (ui->lineEditLogin->text() == "" || ui->lineEditPwd->text() == "") {
+        msgBox.setText("All fields are required");
         msgBox.exec();
-        break;
+    } else {
+        client->gettingDataThread->guiMutex.lock();
+        char *login = QStringToChar(ui->lineEditLogin->text());
+        char *password = QStringToChar(ui->lineEditPwd->text());
+        switch (client->authorize(login, password, AuthorizationType::SIGNIN)) {
+        case AuthorizationStatus::SUCCESSFUL: {
+            moveToSessionsPage();
+            break;
+        }
+        case AuthorizationStatus::FAILED: {
+            msgBox.setText("Login failed! Bad username or password.");
+            msgBox.exec();
+            break;
+        }
+        case AuthorizationStatus::ERROR: {
+            msgBox.setText("Ow, something went wrong. Please try again later.");
+            msgBox.exec();
+            break;
+        }
+        }
+        client->gettingDataThread->guiMutex.unlock();
     }
-    case AuthorizationStatus::ERROR: {
-        msgBox.setText("Ow, something went wrong. Please try again later.");
-        msgBox.exec();
-        break;
-    }
-    }
-    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     std::string host = model->item(index.row(), 1)->text().toStdString();
     int id;
@@ -176,50 +181,56 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
         client->gettingDataThread->start();
         break;
     }
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::on_pushButtonSignup_clicked()
 {
-    client->gettingDataThread->mutex.lock();
     QMessageBox msgBox;
-    if (ui->lineEditRegPwd1->text() == ui->lineEditRegPwd2->text()) {
-        char *login = QStringToChar(ui->lineEditRegLogin->text());
-        char *password = QStringToChar(ui->lineEditRegPwd1->text());
-        QMessageBox msgBox;
-        switch (client->authorize(login, password, AuthorizationType::SIGNUP)) {
-        case AuthorizationStatus::SUCCESSFUL: {
-            moveToSessionsPage();
-            break;
-        }
-        case AuthorizationStatus::FAILED: {
-            msgBox.setText("User with that username already exists");
-            msgBox.exec();
-            break;
-        }
-        case AuthorizationStatus::ERROR: {
-            msgBox.setText("Ow, something went wrong. Please try again later.");
-            msgBox.exec();
-            break;
-        }
-        }
-    } else {
-        msgBox.setText("Password fields must contain the same value");
+    if (ui->lineEditRegLogin->text() == "" || ui->lineEditRegPwd1->text() == "" || ui->lineEditRegPwd1->text() == "") {
+        msgBox.setText("All fields are required");
         msgBox.exec();
+    } else {
+        client->gettingDataThread->guiMutex.lock();
+        if (ui->lineEditRegPwd1->text() == ui->lineEditRegPwd2->text()) {
+            char *login = QStringToChar(ui->lineEditRegLogin->text());
+            char *password = QStringToChar(ui->lineEditRegPwd1->text());
+            QMessageBox msgBox;
+            switch (client->authorize(login, password, AuthorizationType::SIGNUP)) {
+            case AuthorizationStatus::SUCCESSFUL: {
+                moveToSessionsPage();
+                break;
+            }
+            case AuthorizationStatus::FAILED: {
+                msgBox.setText("User with that username already exists");
+                msgBox.exec();
+                break;
+            }
+            case AuthorizationStatus::ERROR: {
+                msgBox.setText("Ow, something went wrong. Please try again later.");
+                msgBox.exec();
+                break;
+            }
+            }
+        } else {
+            msgBox.setText("Password fields must contain the same value");
+            msgBox.exec();
+        }
+        client->gettingDataThread->guiMutex.unlock();
     }
-    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     ui->pages->setCurrentWidget(ui->pageCreateSrv);
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->connectionMutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     std::cout << "CREATING SERVER" << std::endl;
     client->gettingDataThread->stopGettingData();
     QMessageBox msgBox;
@@ -229,11 +240,14 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
         moveToSessionPage();
         break;
     case SessionMessage::MAX:
+        client->gettingDataThread->guiMutex.unlock();
         msgBox.setText("Sorry, too many servers are created");
         msgBox.exec();
         break;
     }
-    client->gettingDataThread->mutex.unlock();
+    cout << "max message" << endl;
+    client->gettingDataThread->guiMutex.unlock();
+    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::moveToSessionPage() {
@@ -268,7 +282,7 @@ void MainWindow::setButtonEnabled(QAbstractButton * button, bool enabled) {
     } else {
         button->setStyleSheet("background-color: rgb(30, 4, 4); color: rgb(140, 140, 140)");
     }
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 string MainWindow::getSrvName() {
@@ -287,7 +301,7 @@ void MainWindow::setHangmanPicture(int badAnswers)
 
 void MainWindow::on_pushButtonStart_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     QObjectList buttons = ui->groupBoxLetters->children();
     for (int i = 0; i < 26; ++i) {
         connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
@@ -317,7 +331,7 @@ void MainWindow::on_pushButtonStart_clicked()
     QPixmap pImg(":/resources/img/p2.jpg");
     ui->labelProgress1->setPixmap(pImg);
     ui->labelWord->setText(QString::fromStdString(hiddenWord));
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::letterClicked()
@@ -359,60 +373,65 @@ string MainWindow::generateWord()
 }
 
 void MainWindow::moveToSessionsPage() {
+    QStandardItemModel* model =  new QStandardItemModel(0, 1);
+    model->setHorizontalHeaderItem(0, new QStandardItem("Server name"));
+    model->setHorizontalHeaderItem(1, new QStandardItem("Host"));
     ui->tableOfServers->horizontalHeader()->setStretchLastSection(true);
     ui->tableOfServers->horizontalHeader()->resizeSection(0, 400);
     ui->tableOfServers->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableOfServers->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableOfServers->verticalHeader()->hide();
     ui->pages->setCurrentWidget(ui->pageSessions);
-    QStandardItemModel* model =  new QStandardItemModel(0, 1);
-    model->setHorizontalHeaderItem(0, new QStandardItem("Server name"));
-    model->setHorizontalHeaderItem(1, new QStandardItem("Host"));
     ui->tableOfServers->setModel(model);
     client->gettingDataThread->gettingDataType = GettingDataType::Sessions;
     client->gettingDataThread->start();
-
 }
 
 void MainWindow::on_pushButtonBackToSessions_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     moveToSessionsPage();
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::on_pushButtonBackToLogin_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     ui->pages->setCurrentWidget(ui->pageLogin);
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::on_pushButtonLogout_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->connectionMutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::LOGOUT);
     ui->pages->setCurrentWidget(ui->pageLogin);
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
+    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::closeEvent (QCloseEvent *event)
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->connectionMutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     if (connectionApproved)
         client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
     event->accept();
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
+    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::on_pushButtonLeave_clicked()
 {
-    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->connectionMutex.lock();
+    client->gettingDataThread->guiMutex.lock();
     client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::SESSION_OUT);
     moveToSessionsPage();
-    client->gettingDataThread->mutex.unlock();
+    client->gettingDataThread->guiMutex.unlock();
+    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::closeOnMaxPlayers() {

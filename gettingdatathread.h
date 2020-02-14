@@ -42,7 +42,8 @@ public:
 
     void run() override;
     GettingDataType gettingDataType;
-    QMutex mutex;
+    QMutex guiMutex;
+    QMutex connectionMutex;
 
 public slots:
     void stopGettingData();

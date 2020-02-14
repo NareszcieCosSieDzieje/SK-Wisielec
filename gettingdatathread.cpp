@@ -14,6 +14,7 @@ GettingDataThread::GettingDataThread(Client *c)
 void GettingDataThread::run()
 {
     while (true) {
+        connectionMutex.lock();
         if (gettingDataType == GettingDataType::Sessions) {
             client->activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
             char msg[2048];
@@ -69,11 +70,13 @@ void GettingDataThread::run()
                 emit setPlayersSig(players);
             }
         }
+        connectionMutex.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 }
 
 void GettingDataThread::stopGettingData()
 {
+    connectionMutex.unlock();
     QThread::exit();
 }

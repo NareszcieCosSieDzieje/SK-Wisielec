@@ -19,10 +19,14 @@ MainWindow::MainWindow(Client *cl, QWidget *parent)
     , client(cl)
 {
     ui->setupUi(this);
+    qRegisterMetaType<std::map<int, std::pair<std::string, std::string>>>( "std::map<int, std::pair<std::string, std::string>>" );
+    qRegisterMetaType<std::vector<std::string>>( "std::vector<std::string>" );
     connect(client->gettingDataThread, SIGNAL(setSessionSig(std::map<int, std::pair<std::string, std::string>>)),
             this, SLOT(setSessions(std::map<int, std::pair<std::string, std::string>>)));
     connect(client->gettingDataThread, SIGNAL(setPlayersSig(std::vector<std::string>)),
             this, SLOT(setPlayers(std::vector<std::string>)));
+    connect(client->gettingDataThread, SIGNAL(onHostLeaveSig()),
+            this, SLOT(onHostLeave()));
 }
 
 MainWindow::~MainWindow()
@@ -32,7 +36,15 @@ MainWindow::~MainWindow()
 
 void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 {
+    client->gettingDataThread->mutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
+
+    QModelIndexList indexes = ui->tableOfServers->selectionModel()->selectedIndexes();
+    int selectedRow = -1;
+    if (!indexes.empty())
+        selectedRow = indexes.at(0).row();
+    cout << "index: " << selectedRow << endl;
+
     if (ui->tableOfServers->verticalHeader()->count()) {
         if (!model->removeRows(0, ui->tableOfServers->verticalHeader()->count())) {
             cout << "RowCount() = " << ui->tableOfServers->verticalHeader()->count() << endl;
@@ -48,10 +60,14 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
         model->setItem(i, 1, new QStandardItem(QString::fromStdString(host)));
         i++;
     }
+    if (selectedRow != -1)
+        ui->tableOfServers->selectRow(selectedRow);
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::setPlayers(std::vector<string> players)
 {
+    client->gettingDataThread->mutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
     if (ui->tableOfPlayers->verticalHeader()->count()) {
         if (!model->removeRows(0, ui->tableOfPlayers->verticalHeader()->count())) {
@@ -70,6 +86,15 @@ void MainWindow::setPlayers(std::vector<string> players)
         }
         i++;
     }
+    client->gettingDataThread->mutex.unlock();
+}
+
+void MainWindow::onHostLeave()
+{
+    client->gettingDataThread->mutex.lock();
+    client->gettingDataThread->stopGettingData();
+    moveToSessionsPage();
+    client->gettingDataThread->mutex.unlock();
 }
 
 
@@ -80,11 +105,14 @@ char *MainWindow::QStringToChar(QString qs) {
 
 void MainWindow::on_pushButtonRegister_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     ui->pages->setCurrentWidget(ui->pageRegister);
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonLogin_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     char *login = QStringToChar(ui->lineEditLogin->text());
     char *password = QStringToChar(ui->lineEditPwd->text());
     QMessageBox msgBox;
@@ -104,12 +132,12 @@ void MainWindow::on_pushButtonLogin_clicked()
         break;
     }
     }
-
-
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
 {
+    client->gettingDataThread->mutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     std::string host = model->item(index.row(), 1)->text().toStdString();
     int id;
@@ -148,10 +176,12 @@ void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
         client->gettingDataThread->start();
         break;
     }
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonSignup_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     QMessageBox msgBox;
     if (ui->lineEditRegPwd1->text() == ui->lineEditRegPwd2->text()) {
         char *login = QStringToChar(ui->lineEditRegLogin->text());
@@ -177,15 +207,19 @@ void MainWindow::on_pushButtonSignup_clicked()
         msgBox.setText("Password fields must contain the same value");
         msgBox.exec();
     }
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     ui->pages->setCurrentWidget(ui->pageCreateSrv);
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     std::cout << "CREATING SERVER" << std::endl;
     client->gettingDataThread->stopGettingData();
     QMessageBox msgBox;
@@ -199,6 +233,7 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
         msgBox.exec();
         break;
     }
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::moveToSessionPage() {
@@ -233,6 +268,7 @@ void MainWindow::setButtonEnabled(QAbstractButton * button, bool enabled) {
     } else {
         button->setStyleSheet("background-color: rgb(30, 4, 4); color: rgb(140, 140, 140)");
     }
+    client->gettingDataThread->mutex.unlock();
 }
 
 string MainWindow::getSrvName() {
@@ -251,6 +287,7 @@ void MainWindow::setHangmanPicture(int badAnswers)
 
 void MainWindow::on_pushButtonStart_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     QObjectList buttons = ui->groupBoxLetters->children();
     for (int i = 0; i < 26; ++i) {
         connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
@@ -280,6 +317,7 @@ void MainWindow::on_pushButtonStart_clicked()
     QPixmap pImg(":/resources/img/p2.jpg");
     ui->labelProgress1->setPixmap(pImg);
     ui->labelWord->setText(QString::fromStdString(hiddenWord));
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::letterClicked()
@@ -321,8 +359,8 @@ string MainWindow::generateWord()
 }
 
 void MainWindow::moveToSessionsPage() {
-    ui->tableOfServers->horizontalHeader()->resizeSection(0, 400);
     ui->tableOfServers->horizontalHeader()->setStretchLastSection(true);
+    ui->tableOfServers->horizontalHeader()->resizeSection(0, 400);
     ui->tableOfServers->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableOfServers->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableOfServers->verticalHeader()->hide();
@@ -333,38 +371,48 @@ void MainWindow::moveToSessionsPage() {
     ui->tableOfServers->setModel(model);
     client->gettingDataThread->gettingDataType = GettingDataType::Sessions;
     client->gettingDataThread->start();
-    cout << "po run() ========================================================================" << endl;
+
 }
 
 void MainWindow::on_pushButtonBackToSessions_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     moveToSessionsPage();
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonBackToLogin_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     ui->pages->setCurrentWidget(ui->pageLogin);
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonLogout_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::LOGOUT);
     ui->pages->setCurrentWidget(ui->pageLogin);
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::closeEvent (QCloseEvent *event)
 {
+    client->gettingDataThread->mutex.lock();
     if (connectionApproved)
         client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
     event->accept();
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::on_pushButtonLeave_clicked()
 {
+    client->gettingDataThread->mutex.lock();
     client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::SESSION_OUT);
     moveToSessionsPage();
+    client->gettingDataThread->mutex.unlock();
 }
 
 void MainWindow::closeOnMaxPlayers() {

@@ -26,7 +26,6 @@ public:
 
     string getSrvName();
     void closeOnMaxPlayers();
-    void moveToSessionsPage();
 
 private slots:
     void on_pushButtonRegister_clicked();
@@ -57,6 +56,8 @@ private slots:
 
     void setPlayers(std::vector<std::string> players);
 
+    void onHostLeave();
+
 
 private:
     Ui::MainWindow *ui;
@@ -84,6 +85,8 @@ private:
     void closeEvent (QCloseEvent *event);
 
     void setButtonEnabled(QAbstractButton *button, bool enabled);
+
+    void moveToSessionsPage();
 };
 
 #endif // MAINWINDOW_H

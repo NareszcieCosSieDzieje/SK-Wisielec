@@ -53,8 +53,7 @@ void GettingDataThread::run()
             char msg[512];
             client->readData(client->clientFd, msg, sizeof(msg));
             if (strcmp(msg, "SESSION-QUIT\0") == 0){
-                stopGettingData();
-                GUI->moveToSessionsPage();
+                emit onHostLeaveSig();
             } else {
                 std::vector<std::string> players;
                 std::cout << msg << std::endl;
@@ -70,7 +69,7 @@ void GettingDataThread::run()
                 emit setPlayersSig(players);
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 }
 

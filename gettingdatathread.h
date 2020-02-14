@@ -20,6 +20,7 @@
 #include <string.h>
 #include <QThread>
 #include <string>
+#include <QMutex>
 
 #include "statuses.hpp"
 #include "player.hpp"
@@ -41,6 +42,7 @@ public:
 
     void run() override;
     GettingDataType gettingDataType;
+    QMutex mutex;
 
 public slots:
     void stopGettingData();
@@ -48,6 +50,7 @@ public slots:
 signals:
     void setSessionSig(std::map<int, std::pair<std::string, std::string>>);
     void setPlayersSig(std::vector<std::string>);
+    void onHostLeaveSig();
 
 private:
     Client * client;

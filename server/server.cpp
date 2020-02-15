@@ -682,13 +682,15 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     //TODO jak sie odlaczy w trakcie to tylko nie wysylaj do niego danych, czyli wywal z sesji i sprawdz na koncu co sie pokrywa
 
     //zbierz info o dołączaniu
-    //std::this_thread::sleep_for(std::chrono::miliseconds(100));
+    std::this_thread::sleep_for(std::chrono::miliseconds(2000));
+
 
     char synchMsg[100];
     playerSessionsFdsMutex.lock();
     auto sessionsFds = playerSessionsFds[sessionID];
     playerSessionsFdsMutex.unlock();
     for( int i = 0; i < sessionsFds.size(); i++ ){
+        std::cout << "deskryptor pliku w sessionLoop = " << sessionsFds.at(i) << "\t playerMsg = " << synchMsg << std::endl;   
         readData( sessionsFds.at(i), synchMsg, sizeof(synchMsg));
         if ( strcmp(synchMsg, "PLAYER-READY\0") == 0 ) {
             std::cout << synchMsg << std::endl;

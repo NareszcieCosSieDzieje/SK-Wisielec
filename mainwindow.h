@@ -32,8 +32,6 @@ private slots:
 
     void on_pushButtonLogin_clicked();
 
-    void on_tableOfServers_doubleClicked(const QModelIndex &index);
-
     void on_pushButtonSignup_clicked();
 
     void on_pushButtonGoToCreateSrv_clicked();
@@ -58,15 +56,22 @@ private slots:
 
     void onHostLeave();
 
+    void on_tableOfServers_clicked(const QModelIndex &index);
+
+    void on_pushButtonJoinSrv_clicked();
 
 private:
     Ui::MainWindow *ui;
 
     Client *client;
 
+    int clickedSessionIndex;
+
     string currentWord, hiddenWord;
 
     int badAnswers;
+
+    std::atomic<bool> isTableCllickedOnce = false;
 
     QStandardItemModel *sessionsListModel;
 

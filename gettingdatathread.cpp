@@ -13,9 +13,11 @@ GettingDataThread::GettingDataThread(Client *c)
 
 void GettingDataThread::run()
 {
-    while (true) {
-        connectionMutex.lock();
+    isGettingData = true;
+    cout << "STARTED GETTING DATA" << endl;
+    while (isGettingData) {
         if (gettingDataType == GettingDataType::Sessions) {
+            cout << "( IN ) SESSIONS =========" << endl;
             client->activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
             char msg[2048];
             client->readData(client->clientFd, msg, sizeof(msg));
@@ -45,6 +47,7 @@ void GettingDataThread::run()
             client->availableSessions = &sessions;
             emit setSessionSig(sessions);
         } else if (gettingDataType == GettingDataType::Players) {
+            cout << "( IN ) PLAYERS =========" << endl;
             char userDataProcess[sizeof(ConnectionProcesses::USER_DATA)];
             strcpy(userDataProcess, ConnectionProcesses::USER_DATA);
             char *userDataProcess2 = strcat(userDataProcess, "-");
@@ -70,13 +73,17 @@ void GettingDataThread::run()
                 emit setPlayersSig(players);
             }
         }
-        connectionMutex.unlock();
+        cout << "( OUT ) THREAD LOOP =========" << endl;
+        if (!isGettingData) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        cout << "( OUT ) THREAD LOOP AFTER SLEEP =========" << endl;
     }
 }
 
 void GettingDataThread::stopGettingData()
 {
-    QThread::exit();
-    connectionMutex.unlock();
+    isGettingData = false;
+    cout << "set isGettingData = false" << endl;
+    this->wait();
+    cout << "KILLED AFTER WAIT" << endl;
 }

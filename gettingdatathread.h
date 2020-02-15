@@ -56,6 +56,7 @@ signals:
 private:
     Client * client;
     MainWindow * GUI;
+    std::atomic<bool> isGettingData;
 };
 
 #endif // GETTINGDATATHREAD_H

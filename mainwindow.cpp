@@ -27,6 +27,7 @@ MainWindow::MainWindow(Client *cl, QWidget *parent)
             this, SLOT(setPlayers(std::vector<std::string>)));
     connect(client->gettingDataThread, SIGNAL(onHostLeaveSig()),
             this, SLOT(onHostLeave()));
+    ui->pages->setCurrentWidget(ui->pageLogin);
 }
 
 MainWindow::~MainWindow()
@@ -60,8 +61,14 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
         model->setItem(i, 1, new QStandardItem(QString::fromStdString(host)));
         i++;
     }
-    if (selectedRow != -1)
+    if (selectedRow != -1) {
+        setButtonEnabled(ui->pushButtonJoinSrv, true);
         ui->tableOfServers->selectRow(selectedRow);
+    }
+    else {
+        clickedSessionIndex = 0;
+        setButtonEnabled(ui->pushButtonJoinSrv, false);
+    }
     client->gettingDataThread->guiMutex.unlock();
 }
 
@@ -142,12 +149,21 @@ void MainWindow::on_pushButtonLogin_clicked()
     }
 }
 
-void MainWindow::on_tableOfServers_doubleClicked(const QModelIndex &index)
+void MainWindow::on_tableOfServers_clicked(const QModelIndex &index)
+{
+    cout << "CLICKED KURWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << endl;
+    client->gettingDataThread->guiMutex.lock();
+    clickedSessionIndex = index.row();
+    setButtonEnabled(ui->pushButtonJoinSrv, true);
+    client->gettingDataThread->guiMutex.unlock();
+}
+
+void MainWindow::on_pushButtonJoinSrv_clicked()
 {
     client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
-    std::string host = model->item(index.row(), 1)->text().toStdString();
+    std::string host = model->item(clickedSessionIndex, 1)->text().toStdString();
     int id;
     for(auto &elem : *(client->availableSessions)) {
         if (elem.second.second == host) {
@@ -234,6 +250,7 @@ void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
     client->gettingDataThread->connectionMutex.lock();
+    cout << ">>>>>>>> ( IN ) CREATE CONN" << endl;
     client->gettingDataThread->guiMutex.lock();
     std::cout << "CREATING SERVER" << std::endl;
     client->gettingDataThread->stopGettingData();
@@ -244,6 +261,7 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
         moveToSessionPage();
         client->gettingDataThread->guiMutex.unlock();
         client->gettingDataThread->connectionMutex.unlock();
+        cout << ">>>>>>>> ( OUT ) CREATE CONN" << endl;
         break;
     case SessionMessage::MAX:
         client->gettingDataThread->guiMutex.unlock();
@@ -385,6 +403,7 @@ void MainWindow::moveToSessionsPage() {
     ui->tableOfServers->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableOfServers->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableOfServers->verticalHeader()->hide();
+    setButtonEnabled(ui->pushButtonJoinSrv, false);
     ui->pages->setCurrentWidget(ui->pageSessions);
     ui->tableOfServers->setModel(model);
     client->gettingDataThread->gettingDataType = GettingDataType::Sessions;
@@ -431,9 +450,11 @@ void MainWindow::on_pushButtonLeave_clicked()
 {
     client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
+    cout << "######## ( IN ) LEAVE" << endl;
     client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::SESSION_OUT);
     moveToSessionsPage();
+    cout << "######## ( OUT ) LEAVE" << endl;
     client->gettingDataThread->guiMutex.unlock();
     client->gettingDataThread->connectionMutex.unlock();
 }

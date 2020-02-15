@@ -60,7 +60,7 @@
      <string notr="true">background-color: black;</string>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="pageLogin">
      <widget class="QLineEdit" name="lineEditLogin">
@@ -285,7 +285,7 @@ font-weight: 500</string>
       <property name="geometry">
        <rect>
         <x>570</x>
-        <y>40</y>
+        <y>80</y>
         <width>221</width>
         <height>31</height>
        </rect>
@@ -317,6 +317,25 @@ font-weight: 500
       </property>
       <property name="text">
        <string>Logout</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonJoinSrv">
+      <property name="geometry">
+       <rect>
+        <x>570</x>
+        <y>40</y>
+        <width>221</width>
+        <height>31</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(68, 10, 10);
+color: rgb(243, 243, 243);
+font-weight: 500
+</string>
+      </property>
+      <property name="text">
+       <string>Join server</string>
       </property>
      </widget>
     </widget>

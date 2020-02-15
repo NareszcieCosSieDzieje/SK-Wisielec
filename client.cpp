@@ -84,9 +84,10 @@ void Client::startConnection(void){
 ssize_t Client::readData(int fd, char * buffer, ssize_t buffsize){
     auto ret = read(fd, buffer, buffsize);
     std::cout << "Read " << ret << " bytes from server" << std::endl;
-    if(ret==-1) {
-        // printf("Oh dear, something went wrong with read()! %s\n", strerror(errno));
+    if (ret==-1) {
         perror("Read failed\n");
+    } else if (ret==0) {
+        GUI->onLostedConnection();
     }
     return ret;
 }
@@ -94,7 +95,7 @@ ssize_t Client::readData(int fd, char * buffer, ssize_t buffsize){
 void Client::writeData(int fd, char * buffer, ssize_t count){
     auto ret = write(fd, buffer, count);
     std::cout << "Send " << ret << " bytes to server" << std::endl;
-    if(ret==-1) perror("Sending failed\n");
+    if(ret==-1) GUI->onLostedConnection();
     if(ret!=count) perror("Send less than requested to server\n");
 }
 

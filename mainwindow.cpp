@@ -247,6 +247,13 @@ void MainWindow::on_pushButtonGoToCreateSrv_clicked()
     client->gettingDataThread->guiMutex.unlock();
 }
 
+void MainWindow::onLostedConnection() {
+    QMessageBox msgBox;
+    msgBox.setText("Sorry, server is overloaded. Ty again later.");
+    msgBox.exec();
+    terminate();
+}
+
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
     client->gettingDataThread->connectionMutex.lock();

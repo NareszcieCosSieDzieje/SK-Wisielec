@@ -26,6 +26,7 @@ public:
 
     string getSrvName();
     void closeOnMaxPlayers();
+    void onLostedConnection();
 
 private slots:
     void on_pushButtonRegister_clicked();
@@ -75,7 +76,7 @@ private:
 
     QStandardItemModel *sessionsListModel;
 
-    bool connectionApproved = false;
+    bool connectionApproved = true;
 
     string generateWord();
 

@@ -625,7 +625,7 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
         players = playerSessions[sID];
     }
     playerSessionsMutex.unlock(); //=================================================================================MUTEX-NEW!
-
+    std::cout << "jest w senduserdata !" << std::endl;
     if ( sessionExists ){   
         clientMapMutex.lock();
         std::string clientNick = clientMap[clientSocket].getNick();
@@ -639,6 +639,7 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
             sessionMsg = sessionStartData[sID];
         }
         sessionStartDataMutex.unlock();
+        std::cout << "WYSYLANIE USER DATA, sessionMsg = " << sessionMsg << std::endl;
         if (sessionMsg != ""){
             if(sessionMsg == "START-SESSION-OK\0"){
                 std::cout << "PRZESZEDL POROWNANIE W USER DATA! (1) " << std::endl;

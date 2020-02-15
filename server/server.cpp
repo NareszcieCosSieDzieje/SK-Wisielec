@@ -243,14 +243,14 @@ int main(int argc, char* argv[]){
                     msg = "START-SESSION-OK";
                     
                     playerSessionsFdsMutex.lock();
-                    for(auto &client: playerSessionsFds[session]){
-                        removeFromEpoll(client);
-                        //writeData(client, msg, sizeof(msg)); //spromptować każdego do uruchomienia sesji
-                        sessionStartDataMutex.lock();
-                        sessionStartData.insert(std::pair<int, std::string>(session, msg));
-                        sessionStartDataMutex.unlock();
-                    }
+                    // for(auto &client: playerSessionsFds[session]){
+                    //     removeFromEpoll(client);
+                    //     //writeData(client, msg, sizeof(msg)); //spromptować każdego do uruchomienia sesji
+                    // }
                     playerSessionsFdsMutex.unlock();
+                    sessionStartDataMutex.lock();
+                    sessionStartData.insert(std::pair<int, std::string>(session, msg));
+                    sessionStartDataMutex.unlock();
                     // TODO: przywroc w sesji GRACZY do EPOLLA!--------------------------------------
                     std::thread sT(sessionLoop, session);
                     sT.detach(); //FIXME:??
@@ -641,6 +641,7 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
         sessionStartDataMutex.unlock();
         if (sessionMsg != ""){
             if(sessionMsg == "START-SESSION-OK\0"){
+                removeFromEpoll(clientSocket);
                 strcpy(data, "START-SESSION-OK\0"); 
             } else if ( (sessionMsg == "START-SESSION-FAIL\0") && (clientNick == host)) {
                 strcpy(data, "START-SESSION-FAIL\0");

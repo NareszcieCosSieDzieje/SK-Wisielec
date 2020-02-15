@@ -417,7 +417,7 @@ void clientValidation(int newClientFd){
     //std::cout << "char pass: " << pass << "\tstr pass: " << passwordS << std::endl;
 
     if(cT == signup){
-        if (searchForUserData(loginS, passwordS, true)) {
+        if (!searchForUserData(loginS, passwordS, true)) {
         	writeToFileMutex.lock();
             addUser(loginS, passwordS);
             writeToFileMutex.unlock();

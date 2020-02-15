@@ -48,7 +48,7 @@ bool searchForUserData(std::string login, std::string password, bool newAccount)
                     if (login == word){
                         found++;
                         if (newAccount == true){
-                            return false;
+                            return true;
                         }
                     }
                 } else {
@@ -84,7 +84,7 @@ void addUser(std::string user, std::string password){
     userFile.open("../user_data.txt",  std::fstream::in | std::fstream::out | std::fstream::ate ); // append instead of overwrite
     if (userFile.is_open()){
         long pos = userFile.tellp();
-        userFile.seekp(pos-1);
+        userFile.seekp(pos-2);
         userFile << ",{" + user + ":" + password + "};";
         userFile.close();
         std::cout<<"Successfully appended file!" <<std::endl;
@@ -100,7 +100,7 @@ std::string getRandomWord(void){
     int numberOfLines = 0;
     std::string line {};
     std::ifstream wordsFile;
-    wordsFile.open("words.txt", std::ifstream::in);
+    wordsFile.open("../words.txt", std::ifstream::in);
     if(wordsFile.is_open()){
         while (std::getline(wordsFile, line)){
             ++numberOfLines;

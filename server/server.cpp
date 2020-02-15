@@ -678,32 +678,35 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     //TODO jak sie odlaczy w trakcie to tylko nie wysylaj do niego danych, czyli wywal z sesji i sprawdz na koncu co sie pokrywa
 
     //zbierz info o dołączaniu
-    std::this_thread::sleep_for(std::chrono::miliseconds(100));
+    //std::this_thread::sleep_for(std::chrono::miliseconds(100));
+
+    char synchMsg[100];
+    playerSessionsFdsMutex.lock();
+    auto sessionsFds = playerSessionsFds[sessionID];
+    playerSessionsFdsMutex.unlock();
+    for( int i = 0; i < sessionsFds.size(); i++ ){
+        readData( sessionsFds.at(i), synchMsg, sizeof(synchMsg));
+        if ( strcpm(synchMsg, "PLAYER-READY\0") == 0 ) {
+            std::cout << synchMsg << std::endl;
+        }
+    } 
 
     sessionStartDataMutex.lock();
     sessionStartData.erase(sessionID);
     sessionStartDataMutex.unlock();
 
-    char synchMsg[ 100 ]
-
-    playerSessionsFdsMutex.lock();
-    for( auto &fd: playerSessionsFds[sessionID] ){
-        readData(fd, synchMsg, sizeof(synchMsg));
-    }
-    playerSessionsFdsMutex.unlock();
+    sessionHostsMutex.lock();
+    sessionHosts.erase(sessionID); 
+    sessionHostsMutex.unlock();
 
     std::map<std::string, int> playerPoints{}; //TODO: wysyłaj tylko do ych co są w rundzie
 
     std::set<std::string> usedWords{};
     const unsigned int rounds = 5;
-
-    sessionHostsMutex.lock();
-    sessionHosts.erase(sessionID); 
-	sessionHostsMutex.unlock();
-
+   
     for (int i = 0; i < rounds; i++) {
 
-        char startMsg[50];
+        char startMsg[100];
 
         playerSessionsMutex.lock();
         std::vector<Player> players = playerSessions[sessionID];

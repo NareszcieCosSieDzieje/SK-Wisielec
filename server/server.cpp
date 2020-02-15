@@ -46,6 +46,9 @@ std::mutex sessionHostsMutex;
 std::map<int, std::string> sessionNames;
 std::mutex sessionNamesMutex;
 
+std::map<int, std::string> sessionStartData;
+std::mutex sessionStartDataMutex;
+
 std::mutex writeToFileMutex;
 
 
@@ -187,7 +190,6 @@ int main(int argc, char* argv[]){
             }
             sessionNamesMutex.unlock();
             
-
             std::cout << "\nDeskryptor w epollu fd = " << clientFd << "\t Dane = " << msg << std::endl;
 			
             if(ret == 0){
@@ -200,7 +202,7 @@ int main(int argc, char* argv[]){
                 validationThread.detach();
             } else if (strcmp(msg, "SEND-SESSION-DATA\0") == 0) {
                 sendSessionData(clientFd);
-                    //TODO: czy inny wątek na to
+                //TODO: czy inny wątek na to
             } else if ( strncmp(msg, "SEND-USER-DATA", 14) == 0){
 				sendUserData(clientFd, msg);
             }
@@ -213,7 +215,7 @@ int main(int argc, char* argv[]){
             } else if (strcmp(msg, "START-SESSION\0") == 0){
                 std::cout << "START-SESSION" << std::endl;
                 int session = 0;
-                char msg[100];
+                std::string msg;
 
                 clientMapMutex.lock();
                 std::string nick = clientMap[clientFd].getNick();
@@ -222,7 +224,6 @@ int main(int argc, char* argv[]){
                 bool found = false;
                 //TODO BLOKADA NA DODAWANIA PRZY STARCIE SESJI!!!!
 
-				
 				playerSessionsMutex.lock();
                 for(auto &elem: playerSessions){
                     for(auto &plr : elem.second){
@@ -239,19 +240,27 @@ int main(int argc, char* argv[]){
                 int sessionSize = playerSessions[session].size();
                 playerSessionsMutex.unlock();
                 if ( sessionSize >= 2){
-                    strcpy(msg, "START-SESSION-OK\0");
+                    msg = "START-SESSION-OK";
+                    
                     playerSessionsFdsMutex.lock();
                     for(auto &client: playerSessionsFds[session]){
                         removeFromEpoll(client);
-                        writeData(client, msg, sizeof(msg)); //spromptować każdego do uruchomienia sesji
+                        //writeData(client, msg, sizeof(msg)); //spromptować każdego do uruchomienia sesji
+                        sessionStartDataMutex.lock();
+                        sessionStartData.insert(session, msg);
+                        sessionStartDataMutex.unlock();
                     }
                     playerSessionsFdsMutex.unlock();
                     // TODO: przywroc w sesji GRACZY do EPOLLA!--------------------------------------
                     std::thread sT(sessionLoop, session);
                     sT.detach(); //FIXME:??
                 } else {
-                    strcpy(msg, "START-SESSION-FAIL\0");
-                    writeData(clientFd, msg, sizeof(msg));
+                    msg = "START-SESSION-FAIL";
+                    sessionStartDataMutex.lock();
+                    sessionStartData.insert(session, msg);
+                    sessionStartDataMutex.unlock();
+                    //writeData(clientFd, msg, sizeof(msg));
+                    //sendUserData(clientFd, msg);
                 }
             } else if (strcmp(msg, "DISSOCIATE-SESSION\0") == 0) {
             	//Wyjdz przed startem sesji
@@ -596,46 +605,66 @@ void sendSessionData(int clientSocket){
 void sendUserData(int clientSocket, char* msg){ //wyslij hsota
 	char data[512];
 	memset(data, 0, sizeof(data));
-	char * pch;
+    char * pch;
     pch = strtok(msg, "-");
     std::stringstream strValue;
-	int sID;
+    int sID;
     for (int hcp = 0; hcp < 3; hcp ++){
-   		if(pch != nullptr ){
-        	pch = strtok(nullptr, "-");
-   		}
+        if(pch != nullptr ){
+            pch = strtok(nullptr, "-");
+        }
     }
     if(pch != nullptr ){
-    	strValue << pch;
-		strValue >> sID; //convert to int
+        strValue << pch;
+        strValue >> sID; //convert to int
     }
     std::vector<Player> players;
     playerSessionsMutex.lock(); //=================================================================================MUTEX-NEW!
-  	int sessionExists = playerSessions.count(sID);
+    int sessionExists = playerSessions.count(sID);
     if ( sessionExists != 0){
         players = playerSessions[sID];
     }
-  	playerSessionsMutex.unlock(); //=================================================================================MUTEX-NEW!
+    playerSessionsMutex.unlock(); //=================================================================================MUTEX-NEW!
 
     if ( sessionExists ){   
-	    char num[10];
-	    sprintf (num, "%d", players.size());
-	    strcpy(data, num);
-	    strcat(data,":");
-	    sessionHostsMutex.lock(); //=================================================================================MUTEX-NEW!
-	    std::string host = sessionHosts[sID]; 
-	    sessionHostsMutex.unlock(); //=================================================================================MUTEX-NEW!
-	    strcat(data, host.c_str());
-	    strcat(data, ",");
-	    for (auto & element : players) {
-	    	if (element.getNick() != host){
-	    		strcat(data, element.getNick().c_str() );
-	        	strcat(data, ",");	
-	    	}
-	    }
-	} else {
-		strcpy(data, "SESSION-QUIT\0"); //TODO: jezeli host wyjdzie to niech usunie ludzi i rozwiaze sesje
-	}
+        clientMapMutex.lock();
+        std::string clientNick = clientMap[clientSocket].getNick();
+        clientMapMutex.unlock();
+        sessionHostsMutex.lock();
+        std::string host = sessionHosts[sID];
+        sessionHostsMutex.unlock();
+        sessionStartDataMutex.lock();
+        std::string sessionMsg = ""; 
+        if (sessionStartData.count(sID) == 1) {
+            sessionMsg = sessionStartData[sID];
+        }
+        sessionStartDataMutex.unlock();
+        if (sessionMsg != ""){
+            if(sessionMsg == "START-SESSION-OK\0"){
+                strcpy(data, "START-SESSION-OK\0"); 
+            } else if ( (sessionMsg == "START-SESSION-FAIL\0") && (clientFdNick = host) {
+                strcpy(data, "START-SESSION-FAIL\0");
+                sessionStartDataMutex.lock();
+                sessionStartData.erase(sID);
+                sessionStartDataMutex.unlock();
+            }
+        } else {
+            char num[10];
+            sprintf (num, "%d", players.size());
+            strcpy(data, num);
+            strcat(data,":");
+            strcat(data, host.c_str());
+            strcat(data, ",");
+            for (auto & element : players) {
+                if (element.getNick() != host){
+                    strcat(data, element.getNick().c_str() );
+                    strcat(data, ",");  
+                }
+            }    
+        }    
+    } else {
+        strcpy(data, "SESSION-QUIT\0"); //TODO: jezeli host wyjdzie to niech usunie ludzi i rozwiaze sesje
+    }
 	 // std::cout << "=======================================> DANE W senduserdata: " << sID<< std::endl;
 	std::cout << "Send user data = " << data << std::endl;
     writeData(clientSocket, data, sizeof(data));
@@ -648,13 +677,28 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
     //TODO jak sie odlaczy w trakcie to tylko nie wysylaj do niego danych, czyli wywal z sesji i sprawdz na koncu co sie pokrywa
 
+    //zbierz info o dołączaniu
+    std::this_thread::sleep_for(std::chrono::miliseconds(100));
+
+    sessionStartDataMutex.lock();
+    sessionStartData.erase(sessionID);
+    sessionStartDataMutex.unlock();
+
+    char synchMsg[ 100 ]
+
+    playerSessionsFdsMutex.lock();
+    for( auto &fd: playerSessionsFds[sessionID] ){
+        readData(fd, synchMsg, sizeof(synchMsg));
+    }
+    playerSessionsFdsMutex.unlock();
+
     std::map<std::string, int> playerPoints{}; //TODO: wysyłaj tylko do ych co są w rundzie
 
     std::set<std::string> usedWords{};
     const unsigned int rounds = 5;
 
     sessionHostsMutex.lock();
-    sessionHosts.erase(sessionID); // USUWANIE HOSTA PO STARCIE RUNDY!
+    sessionHosts.erase(sessionID); 
 	sessionHostsMutex.unlock();
 
     for (int i = 0; i < rounds; i++) {
@@ -766,6 +810,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                 std::string player = p.first;
                 char winner_buf[50];
                 int ret = recv(keyFd, winner_buf, sizeof(winner_buf), MSG_DONTWAIT);
+                // read 0
                 if (ret > 0) {
                     if (!closing) {
                         roundTime += 3.0;
@@ -781,6 +826,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             if (time_span.count() > roundTime) {
                 break;
             }
+            std::this_thread::sleep_for(std::chrono::miliseconds(50));
         }
         char endMsg[50];
         //char numWin[20];

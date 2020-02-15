@@ -247,7 +247,7 @@ int main(int argc, char* argv[]){
                         removeFromEpoll(client);
                         //writeData(client, msg, sizeof(msg)); //spromptować każdego do uruchomienia sesji
                         sessionStartDataMutex.lock();
-                        sessionStartData.insert(session, msg);
+                        sessionStartData.insert(std::pair<int, std::string>(session, msg));
                         sessionStartDataMutex.unlock();
                     }
                     playerSessionsFdsMutex.unlock();
@@ -257,7 +257,7 @@ int main(int argc, char* argv[]){
                 } else {
                     msg = "START-SESSION-FAIL";
                     sessionStartDataMutex.lock();
-                    sessionStartData.insert(session, msg);
+                    sessionStartData.insert(std::pair<int, std::string>(session, msg));
                     sessionStartDataMutex.unlock();
                     //writeData(clientFd, msg, sizeof(msg));
                     //sendUserData(clientFd, msg);
@@ -642,7 +642,7 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
         if (sessionMsg != ""){
             if(sessionMsg == "START-SESSION-OK\0"){
                 strcpy(data, "START-SESSION-OK\0"); 
-            } else if ( (sessionMsg == "START-SESSION-FAIL\0") && (clientFdNick = host) {
+            } else if ( (sessionMsg == "START-SESSION-FAIL\0") && (clientNick == host)) {
                 strcpy(data, "START-SESSION-FAIL\0");
                 sessionStartDataMutex.lock();
                 sessionStartData.erase(sID);
@@ -686,7 +686,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     playerSessionsFdsMutex.unlock();
     for( int i = 0; i < sessionsFds.size(); i++ ){
         readData( sessionsFds.at(i), synchMsg, sizeof(synchMsg));
-        if ( strcpm(synchMsg, "PLAYER-READY\0") == 0 ) {
+        if ( strcmp(synchMsg, "PLAYER-READY\0") == 0 ) {
             std::cout << synchMsg << std::endl;
         }
     } 
@@ -829,7 +829,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             if (time_span.count() > roundTime) {
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::miliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
         char endMsg[50];
         //char numWin[20];

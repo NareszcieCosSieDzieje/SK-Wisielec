@@ -641,10 +641,12 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
         sessionStartDataMutex.unlock();
         if (sessionMsg != ""){
             if(sessionMsg == "START-SESSION-OK\0"){
+                std::cout << "PRZESZEDL POROWNANIE W USER DATA! (1) " << std::endl;
                 removeFromEpoll(clientSocket);
                 strcpy(data, "START-SESSION-OK\0"); 
             } else if ( (sessionMsg == "START-SESSION-FAIL\0") && (clientNick == host)) {
                 strcpy(data, "START-SESSION-FAIL\0");
+                std::cout << "PRZESZEDL POROWNANIE W USER DATA! (2) " << std::endl;
                 sessionStartDataMutex.lock();
                 sessionStartData.erase(sID);
                 sessionStartDataMutex.unlock();
@@ -777,6 +779,8 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             writeData(pFd.second, startMsg, sizeof(startMsg));
         }
         playerSessionsFdsMutex.unlock();
+
+        std::terminate();
 
         std::map<std::string, double> winners{};
         bool closing = false;

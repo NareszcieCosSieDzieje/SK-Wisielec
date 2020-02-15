@@ -637,7 +637,8 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
 		strcpy(data, "SESSION-QUIT\0"); //TODO: jezeli host wyjdzie to niech usunie ludzi i rozwiaze sesje
 	}
 	 // std::cout << "=======================================> DANE W senduserdata: " << sID<< std::endl;
-	writeData(clientSocket, data, sizeof(data));
+	std::cout << "Send user data = " << data << std::endl;
+    writeData(clientSocket, data, sizeof(data));
 }
 
  
@@ -857,7 +858,6 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         strcat(scoreBoard, num);
         strcat(scoreBoard, "\n");
     }
-
     char check[10];
     playerSessionsFdsMutex.lock();
     for (auto &p: playerSessionsFds[sessionID]) {
@@ -1072,8 +1072,16 @@ void handlePlayerExit(int clientFd){
     	sessionHosts.erase(session);
     	sessionHostsMutex.unlock();
     } else {             
+
+        std::cout << "Handle (host nie usuwa sesji!)" << std::endl; 
+        
         playerSessionsMutex.lock();
+        
         if (playerSessions.count(session) == 1) {
+
+            // auto v1 = playerSessions[session];
+            // auto end1 = remove_if(v1.begin(), v1.end(), [playerNick](const Player & p){ return (p.getNick() == playerNick) ; });
+            // playerSessions[session].erase(end1, playerSessions[session].end());
             auto it = playerSessions[session].begin();
             while (it != playerSessions[session].end()) {
                 if (it->getNick() == playerNick) {
@@ -1083,23 +1091,31 @@ void handlePlayerExit(int clientFd){
                 }
             }
         }
+      
+
         playerSessionsMutex.unlock();
 
-        std::cout << "Handle (host nie usuwa sesji!)" << std::endl; 
-        
         playerSessionsFdsMutex.lock();
-        for(auto &fds: playerSessionsFds){
-            std::vector<int> vec = fds.second;
-            vec.erase( std::remove_if( vec.begin(), vec.end(), [clientFd](int i){ return i == clientFd;}), vec.end());
+        if (playerSessionsFds.count(session) == 1) {
+
+            auto it = playerSessionsFds[session].begin();
+            while (it != playerSessionsFds[session].end()) {
+                if (*it == clientFd) {
+                    it = playerSessionsFds[session].erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            // auto v2 = playerSessionsFds[session];
+            // auto end2 = v2.erase( std::remove_if( v2.begin(), v2.end(), [clientFd](int i){ return (i == clientFd) ;}), v2.end());
+            // playerSessionsFds[session].erase(end2, playerSessionsFds[session].end());
+        
         }
         playerSessionsFdsMutex.unlock();
-	}
-
-
-  
-
+        
+    }
 }
-
 
 /*
 void joinAllThreads(){

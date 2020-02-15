@@ -62,6 +62,8 @@ public:
     void joinSession(int id);
     int createSession();
     int goToSession(int id);
+    int startSession();
+    void startGame();
 private:
     void dataGetter();
 };

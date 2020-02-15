@@ -26,6 +26,7 @@ public:
     static inline const char* SESSION_OUT = "DISSOCIATE-SESSION\0";
     static inline const char* DISCONNECT = "DISCONNECTING\0";
     static inline const char* LOGOUT = "LOG-OUT\0";
+    static inline const char* START_SESSION = "START-SESSION\0";
 };
 
 enum SessionMessage {
@@ -35,6 +36,11 @@ enum SessionMessage {
     BUSY,
     KILLED,
     SESSION_ERROR
+};
+
+enum SessionStart {
+    OK,
+    FAIL
 };
 
 enum GettingDataType {

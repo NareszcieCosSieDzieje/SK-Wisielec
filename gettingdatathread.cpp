@@ -16,6 +16,7 @@ void GettingDataThread::run()
     isGettingData = true;
     cout << "STARTED GETTING DATA" << endl;
     while (isGettingData) {
+        connectionMutex.lock();
         if (gettingDataType == GettingDataType::Sessions) {
             cout << "( IN ) SESSIONS =========" << endl;
             client->activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
@@ -58,6 +59,10 @@ void GettingDataThread::run()
             client->readData(client->clientFd, msg, sizeof(msg));
             if (strcmp(msg, "SESSION-QUIT\0") == 0){
                 emit onHostLeaveSig();
+            } else if (strcmp(msg, "START-SESSION-OK\0") == 0) {
+                emit onGameStart(SessionStart::OK);
+            } else if (strcmp(msg, "START-SESSION-FAIL\0") == 0) {
+                emit onGameStart(SessionStart::FAIL);
             } else {
                 std::vector<std::string> players;
                 std::cout << msg << std::endl;
@@ -73,6 +78,7 @@ void GettingDataThread::run()
                 emit setPlayersSig(players);
             }
         }
+        connectionMutex.unlock();
         cout << "( OUT ) THREAD LOOP =========" << endl;
         if (!isGettingData) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(300));

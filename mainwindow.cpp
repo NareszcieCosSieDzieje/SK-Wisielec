@@ -10,6 +10,7 @@
 #include <QCloseEvent>
 
 #include "constants.h"
+#include "mainwindow.h"
 
 using namespace std;
 
@@ -21,12 +22,15 @@ MainWindow::MainWindow(Client *cl, QWidget *parent)
     ui->setupUi(this);
     qRegisterMetaType<std::map<int, std::pair<std::string, std::string>>>( "std::map<int, std::pair<std::string, std::string>>" );
     qRegisterMetaType<std::vector<std::string>>( "std::vector<std::string>" );
+    qRegisterMetaType<SessionMessage>( "SessionMessage" );
     connect(client->gettingDataThread, SIGNAL(setSessionSig(std::map<int, std::pair<std::string, std::string>>)),
             this, SLOT(setSessions(std::map<int, std::pair<std::string, std::string>>)));
     connect(client->gettingDataThread, SIGNAL(setPlayersSig(std::vector<std::string>)),
             this, SLOT(setPlayers(std::vector<std::string>)));
     connect(client->gettingDataThread, SIGNAL(onHostLeaveSig()),
             this, SLOT(onHostLeave()));
+    connect(client->gettingDataThread, SIGNAL(onGameStart(SessionStart)),
+            this, SLOT(startGame(SessionStart)));
     ui->pages->setCurrentWidget(ui->pageLogin);
 }
 
@@ -98,12 +102,10 @@ void MainWindow::setPlayers(std::vector<string> players)
 
 void MainWindow::onHostLeave()
 {
-    client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     client->gettingDataThread->stopGettingData();
     moveToSessionsPage();
     client->gettingDataThread->guiMutex.unlock();
-    client->gettingDataThread->connectionMutex.unlock();
 }
 
 
@@ -151,7 +153,6 @@ void MainWindow::on_pushButtonLogin_clicked()
 
 void MainWindow::on_tableOfServers_clicked(const QModelIndex &index)
 {
-    cout << "CLICKED KURWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << endl;
     client->gettingDataThread->guiMutex.lock();
     clickedSessionIndex = index.row();
     setButtonEnabled(ui->pushButtonJoinSrv, true);
@@ -160,7 +161,6 @@ void MainWindow::on_tableOfServers_clicked(const QModelIndex &index)
 
 void MainWindow::on_pushButtonJoinSrv_clicked()
 {
-    client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfServers->model());
     std::string host = model->item(clickedSessionIndex, 1)->text().toStdString();
@@ -201,7 +201,6 @@ void MainWindow::on_pushButtonJoinSrv_clicked()
         break;
     }
     client->gettingDataThread->guiMutex.unlock();
-    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::on_pushButtonSignup_clicked()
@@ -249,14 +248,13 @@ void MainWindow::on_pushButtonGoToCreateSrv_clicked()
 
 void MainWindow::onLostedConnection() {
     QMessageBox msgBox;
-    msgBox.setText("Sorry, server is overloaded. Ty again later.");
+    msgBox.setText("Sorry, the server is down. Try again later.");
     msgBox.exec();
     terminate();
 }
 
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
-    client->gettingDataThread->connectionMutex.lock();
     cout << ">>>>>>>> ( IN ) CREATE CONN" << endl;
     client->gettingDataThread->guiMutex.lock();
     std::cout << "CREATING SERVER" << std::endl;
@@ -267,12 +265,10 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
         setButtonEnabled(ui->pushButtonStart, true);
         moveToSessionPage();
         client->gettingDataThread->guiMutex.unlock();
-        client->gettingDataThread->connectionMutex.unlock();
         cout << ">>>>>>>> ( OUT ) CREATE CONN" << endl;
         break;
     case SessionMessage::MAX:
         client->gettingDataThread->guiMutex.unlock();
-        client->gettingDataThread->connectionMutex.unlock();
         msgBox.setText("Sorry, too many servers are created");
         msgBox.exec();
         break;
@@ -330,36 +326,58 @@ void MainWindow::setHangmanPicture(int badAnswers)
 
 void MainWindow::on_pushButtonStart_clicked()
 {
+    client->gettingDataThread->connectionMutex.lock();
+    client->activateConnectionProcess(ConnectionProcesses::START_SESSION);
+    setButtonEnabled(ui->pushButtonStart, false);
+    client->gettingDataThread->connectionMutex.unlock();
+
+    // TO NIŹEJ TO DO PRZENIESIENIA ===================================================
+//    QObjectList buttons = ui->groupBoxLetters->children();
+//    for (int i = 0; i < 26; ++i) {
+//        connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
+//    }
+//    lettersSetEnabled(false);
+//    ui->pages->setCurrentWidget(ui->pageGame);
+//    this->repaint();
+//    for (int sec = 3; sec >= 1; --sec) {
+//        ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
+//        this->repaint();
+//        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+//    }
+//    ui->labelCounter->setVisible(false);
+//    currentWord = generateWord();
+//    for (int i = 0; i < int(currentWord.size()); ++i) {
+//        if (currentWord[i] == ' ')
+//        {
+//            hiddenWord.append(" ");
+//        }
+//        else
+//        {
+//            hiddenWord.append("_");
+//        }
+//    }
+//    lettersSetEnabled(true);
+//    setHangmanPicture(0);
+//    QPixmap pImg(":/resources/img/p2.jpg");
+//    ui->labelProgress1->setPixmap(pImg);
+//    ui->labelWord->setText(QString::fromStdString(hiddenWord));
+//    client->gettingDataThread->guiMutex.unlock();
+}
+
+void MainWindow::startGame(SessionStart sessionMessage) {
     client->gettingDataThread->guiMutex.lock();
-    QObjectList buttons = ui->groupBoxLetters->children();
-    for (int i = 0; i < 26; ++i) {
-        connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
+    QMessageBox msgBox;
+    switch (sessionMessage) {
+    case SessionStart::OK:
+        client->gettingDataThread->stopGettingData();
+        client->startGame();
+        break;
+    case SessionStart::FAIL:
+        setButtonEnabled(ui->pushButtonStart, true);
+        msgBox.setText("You cannot play without other players");
+        msgBox.exec();
+        break;
     }
-    lettersSetEnabled(false);
-    ui->pages->setCurrentWidget(ui->pageGame);
-    this->repaint();
-    for (int sec = 3; sec >= 1; --sec) {
-        ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
-        this->repaint();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-    ui->labelCounter->setVisible(false);
-    currentWord = generateWord();
-    for (int i = 0; i < int(currentWord.size()); ++i) {
-        if (currentWord[i] == ' ')
-        {
-            hiddenWord.append(" ");
-        }
-        else
-        {
-            hiddenWord.append("_");
-        }
-    }
-    lettersSetEnabled(true);
-    setHangmanPicture(0);
-    QPixmap pImg(":/resources/img/p2.jpg");
-    ui->labelProgress1->setPixmap(pImg);
-    ui->labelWord->setText(QString::fromStdString(hiddenWord));
     client->gettingDataThread->guiMutex.unlock();
 }
 
@@ -405,6 +423,7 @@ void MainWindow::moveToSessionsPage() {
     QStandardItemModel* model =  new QStandardItemModel(0, 1);
     model->setHorizontalHeaderItem(0, new QStandardItem("Server name"));
     model->setHorizontalHeaderItem(1, new QStandardItem("Host"));
+    ui->tableOfServers->setModel(model);
     ui->tableOfServers->horizontalHeader()->setStretchLastSection(true);
     ui->tableOfServers->horizontalHeader()->resizeSection(0, 400);
     ui->tableOfServers->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -412,7 +431,6 @@ void MainWindow::moveToSessionsPage() {
     ui->tableOfServers->verticalHeader()->hide();
     setButtonEnabled(ui->pushButtonJoinSrv, false);
     ui->pages->setCurrentWidget(ui->pageSessions);
-    ui->tableOfServers->setModel(model);
     client->gettingDataThread->gettingDataType = GettingDataType::Sessions;
     client->gettingDataThread->start();
 }
@@ -433,29 +451,24 @@ void MainWindow::on_pushButtonBackToLogin_clicked()
 
 void MainWindow::on_pushButtonLogout_clicked()
 {
-    client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::LOGOUT);
     ui->pages->setCurrentWidget(ui->pageLogin);
     client->gettingDataThread->guiMutex.unlock();
-    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::closeEvent (QCloseEvent *event)
 {
-    client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     if (connectionApproved)
         client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
     event->accept();
     client->gettingDataThread->guiMutex.unlock();
-    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::on_pushButtonLeave_clicked()
 {
-    client->gettingDataThread->connectionMutex.lock();
     client->gettingDataThread->guiMutex.lock();
     cout << "######## ( IN ) LEAVE" << endl;
     client->gettingDataThread->stopGettingData();
@@ -463,13 +476,12 @@ void MainWindow::on_pushButtonLeave_clicked()
     moveToSessionsPage();
     cout << "######## ( OUT ) LEAVE" << endl;
     client->gettingDataThread->guiMutex.unlock();
-    client->gettingDataThread->connectionMutex.unlock();
 }
 
 void MainWindow::closeOnMaxPlayers() {
     connectionApproved = false;
     QMessageBox msgBox;
-    msgBox.setText("Sorry, server is overloaded. Ty again later.");
+    msgBox.setText("Sorry, server is overloaded. Try again later.");
     msgBox.exec();
     close();
 }

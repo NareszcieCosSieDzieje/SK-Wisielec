@@ -158,7 +158,19 @@ int Client::goToSession(int id) {
     }
 }
 
-
 int Client::createSession() {
     return goToSession(0);
+}
+
+void Client::startGame() {
+    char msg1[100];
+    strcpy(msg1, "PLAYER-READY\0");
+    writeData(clientFd, msg1, sizeof(msg1));
+    char msg2[100];
+    readData(clientFd, msg2, sizeof(msg2));
+    if (strcmp(msg2, "ROUND-START\0") == 0) {
+        cout << "ROUND STARTED ===========================================" << endl;
+    } else if (strcmp(msg2, "SESSION-TIMEOUT") == 0) {
+        // TODO
+    }
 }

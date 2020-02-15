@@ -28,6 +28,7 @@ public:
     void closeOnMaxPlayers();
     void onLostedConnection();
 
+    void startGame();
 private slots:
     void on_pushButtonRegister_clicked();
 
@@ -61,6 +62,7 @@ private slots:
 
     void on_pushButtonJoinSrv_clicked();
 
+    void startGame(SessionStart sessionMessage);
 private:
     Ui::MainWindow *ui;
 

@@ -16,7 +16,9 @@ void GettingDataThread::run()
     isGettingData = true;
     cout << "STARTED GETTING DATA" << endl;
     while (isGettingData) {
+        cout << "CONN MUTEX before" << endl;
         connectionMutex.lock();
+        cout << "CONN MUTEX after" << endl;
         if (gettingDataType == GettingDataType::Sessions) {
             cout << "( IN ) SESSIONS =========" << endl;
             client->activateConnectionProcess(ConnectionProcesses::SESSION_DATA);
@@ -80,7 +82,9 @@ void GettingDataThread::run()
         } else if (gettingDataType == GettingDataType::Game) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
             char msg[200];
+            cout << "Im before read!" << endl;
             client->readData(client->clientFd, msg, sizeof(msg));
+            cout << "WHO WIN --> " << msg << endl;
             if (strcmp(msg, "WIN-0\0") == 0) {
                 emit onGameFinish("");
             } else if (strncmp(msg, "WIN-", 4) == 0) {
@@ -89,6 +93,7 @@ void GettingDataThread::run()
                 std::string winner(c);
                 emit onGameFinish(winner);
             }
+            connectionMutex.unlock();
             break;
         }
         connectionMutex.unlock();

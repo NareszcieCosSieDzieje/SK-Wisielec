@@ -100,10 +100,10 @@ void MainWindow::setPlayers(std::vector<string> players)
         }
     }
     int i = 0;
-    playersScores.clear();
     for( std::string player : players) {
-        cout << i << ": " << player << endl;
-        playersScores.insert(std::pair(0, player));
+        if (i == 0)
+            playersScores.clear();
+        playersScores.insert(std::pair(player, 0));
         model->setItem(i, 0, new QStandardItem(QString::fromStdString(player)));
         if (i) {
             model->setItem(i, 1, new QStandardItem("Player"));
@@ -361,9 +361,13 @@ void MainWindow::startGame(SessionStart sessionMessage) {
     client->gettingDataThread->guiMutex.lock();
     sendExitInfoToServer = false;
     QMessageBox msgBox;
+    int i = 0;
     switch (sessionMessage) {
     case SessionStart::OK:
         client->gettingDataThread->stopGettingData();
+        ui->PlayerInfo1->setVisible(false);
+        ui->PlayerInfo2->setVisible(false);
+        ui->PlayerInfo3->setVisible(false);
         client->startGame();
         break;
     case SessionStart::FAIL:
@@ -377,16 +381,42 @@ void MainWindow::startGame(SessionStart sessionMessage) {
 
 void MainWindow::prepareRound(std::string word) {
     lettersSetEnabled(false);
-    ui->labelWinner->setVisible(false);
-    ui->labelHangman->setVisible(true);
     ui->pages->setCurrentWidget(ui->pageGame);
     ui->labelCounter->setVisible(true);
+    int i = 0;
+    for (std::pair<std::string, int> player : playersScores) {
+        if (player.first != client->login) {
+            i++;
+            switch (i) {
+            case 1:
+                ui->labelPlayerName1->setText(QString::fromStdString(player.first));
+                ui->labelPoints1->setText(QString::fromStdString(to_string(player.second)));
+                ui->PlayerInfo1->setVisible(true);
+                break;
+            case 2:
+                ui->labelPlayerName2->setText(QString::fromStdString(player.first));
+                ui->labelPoints2->setText(QString::fromStdString(to_string(player.second)));
+                ui->PlayerInfo2->setVisible(true);
+                break;
+            case 3:
+                ui->labelPlayerName3->setText(QString::fromStdString(player.first));
+                ui->labelPoints3->setText(QString::fromStdString(to_string(player.second)));
+                ui->PlayerInfo3->setVisible(true);
+                break;
+            }
+        }
+    }
     this->repaint();
+    for (std::pair<std::string, int> player : playersScores) {
+
+    }
     for (int sec = 3; sec >= 1; --sec) {
         ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
         this->repaint();
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
+    ui->labelWinner->setVisible(false);
+    ui->labelHangman->setVisible(true);
     ui->labelCounter->setVisible(false);
     currentWord = word;
     hiddenWord.clear();
@@ -447,10 +477,10 @@ void MainWindow::letterClicked()
 void MainWindow::finishRound(string winner) {
     client->gettingDataThread->guiMutex.lock();
     lettersSetEnabled(false);
-    for (std::pair<int, std::string> player : playersScores) {
-        if (player.second == winner) {
-            player.first++;
-            if (player.second == client->login) {
+    for (std::pair<std::string, int> player : playersScores) {
+        if (player.first == winner) {
+            player.second++;
+            if (player.first == client->login) {
                 ui->labelScorePoints->setText(QString::fromStdString(to_string(++playerScore)));
             }
             break;
@@ -465,6 +495,7 @@ void MainWindow::finishRound(string winner) {
         ui->labelWinner->setText("No one won the game :(");
     }
     client->startRound();
+    cout << "afterround start" << endl;
     client->gettingDataThread->guiMutex.unlock();
 }
 

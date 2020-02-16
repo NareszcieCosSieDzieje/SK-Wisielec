@@ -1068,7 +1068,7 @@ font-weight: 500
       <property name="geometry">
        <rect>
         <x>300</x>
-        <y>200</y>
+        <y>140</y>
         <width>200</width>
         <height>150</height>
        </rect>
@@ -1092,7 +1092,7 @@ font-weight: 500
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>120</y>
+        <y>100</y>
         <width>801</width>
         <height>301</height>
        </rect>
@@ -1136,7 +1136,7 @@ font-weight: 500
         </rect>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: rgb(46, 52, 54)</string>
+        <string notr="true"/>
        </property>
        <property name="text">
         <string/>
@@ -1179,11 +1179,11 @@ font-weight: 500
 font-weight: 600</string>
        </property>
        <property name="text">
-        <string>2</string>
+        <string>0</string>
        </property>
       </widget>
      </widget>
-     <widget class="QWidget" name="PlayerInfo1_2" native="true">
+     <widget class="QWidget" name="PlayerInfo2" native="true">
       <property name="geometry">
        <rect>
         <x>640</x>
@@ -1192,7 +1192,7 @@ font-weight: 600</string>
         <height>61</height>
        </rect>
       </property>
-      <widget class="QLabel" name="labelProgress1_2">
+      <widget class="QLabel" name="labelProgress2_2">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -1202,13 +1202,13 @@ font-weight: 600</string>
         </rect>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: rgb(46, 52, 54)</string>
+        <string notr="true"/>
        </property>
        <property name="text">
         <string/>
        </property>
       </widget>
-      <widget class="QLabel" name="labelPlayerName1_2">
+      <widget class="QLabel" name="labelPlayerName2">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -1224,7 +1224,7 @@ font-weight: 600</string>
         <string>Player name</string>
        </property>
       </widget>
-      <widget class="QLabel" name="labelPoints1_2">
+      <widget class="QLabel" name="labelPoints2">
        <property name="geometry">
         <rect>
          <x>130</x>
@@ -1245,11 +1245,11 @@ font-weight: 600</string>
 font-weight: 600</string>
        </property>
        <property name="text">
-        <string>2</string>
+        <string>0</string>
        </property>
       </widget>
      </widget>
-     <widget class="QWidget" name="PlayerInfo1_3" native="true">
+     <widget class="QWidget" name="PlayerInfo3" native="true">
       <property name="geometry">
        <rect>
         <x>640</x>
@@ -1258,7 +1258,7 @@ font-weight: 600</string>
         <height>61</height>
        </rect>
       </property>
-      <widget class="QLabel" name="labelProgress1_3">
+      <widget class="QLabel" name="labelProgress3">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -1268,13 +1268,13 @@ font-weight: 600</string>
         </rect>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: rgb(46, 52, 54)</string>
+        <string notr="true"/>
        </property>
        <property name="text">
         <string/>
        </property>
       </widget>
-      <widget class="QLabel" name="labelPlayerName1_3">
+      <widget class="QLabel" name="labelPlayerName3">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -1290,7 +1290,7 @@ font-weight: 600</string>
         <string>Player name</string>
        </property>
       </widget>
-      <widget class="QLabel" name="labelPoints1_3">
+      <widget class="QLabel" name="labelPoints3">
        <property name="geometry">
         <rect>
          <x>130</x>
@@ -1311,7 +1311,7 @@ font-weight: 600</string>
 font-weight: 600</string>
        </property>
        <property name="text">
-        <string>2</string>
+        <string>0</string>
        </property>
       </widget>
      </widget>
@@ -1365,8 +1365,8 @@ font-weight: 600</string>
      <widget class="QLabel" name="labelWinner">
       <property name="geometry">
        <rect>
-        <x>0</x>
-        <y>210</y>
+        <x>10</x>
+        <y>230</y>
         <width>781</width>
         <height>211</height>
        </rect>
@@ -1380,7 +1380,7 @@ font-weight: 600</string>
        <string notr="true">color: white;</string>
       </property>
       <property name="text">
-       <string>wefwfefwfwfew</string>
+       <string/>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -1393,8 +1393,8 @@ font-weight: 600</string>
      <zorder>labelCounter</zorder>
      <zorder>label_3</zorder>
      <zorder>PlayerInfo1</zorder>
-     <zorder>PlayerInfo1_2</zorder>
-     <zorder>PlayerInfo1_3</zorder>
+     <zorder>PlayerInfo2</zorder>
+     <zorder>PlayerInfo3</zorder>
      <zorder>labelScore</zorder>
      <zorder>labelScorePoints</zorder>
     </widget>

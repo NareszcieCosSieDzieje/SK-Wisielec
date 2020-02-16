@@ -66,6 +66,7 @@ public:
     int goToSession(int id);
     int startSession();
     void startGame();
+    void onRoundFinish(bool winner);
 private:
     void dataGetter();
     void waitForPlayers();

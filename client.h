@@ -66,6 +66,7 @@ public:
     void startGame();
 private:
     void dataGetter();
+    void waitForPlayers();
 };
 
 #endif // CLIENT_H

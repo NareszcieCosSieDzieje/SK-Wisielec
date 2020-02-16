@@ -60,7 +60,7 @@
      <string notr="true">background-color: black;</string>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="pageLogin">
      <widget class="QLineEdit" name="lineEditLogin">
@@ -407,7 +407,7 @@ font-weight: 500
       <property name="geometry">
        <rect>
         <x>300</x>
-        <y>120</y>
+        <y>160</y>
         <width>371</width>
         <height>331</height>
        </rect>
@@ -436,7 +436,7 @@ font-weight: 500</string>
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>420</y>
+        <y>460</y>
         <width>171</width>
         <height>30</height>
        </rect>
@@ -454,16 +454,21 @@ font-weight: 500
      <widget class="QLabel" name="labelSrvName">
       <property name="geometry">
        <rect>
-        <x>180</x>
-        <y>40</y>
-        <width>461</width>
+        <x>110</x>
+        <y>60</y>
+        <width>551</width>
         <height>51</height>
        </rect>
       </property>
       <property name="font">
        <font>
-        <pointsize>100</pointsize>
+        <pointsize>28</pointsize>
        </font>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">border-bottom: 3px solid rgb(122, 0, 0);
+padding-bottom: 5px;
+color: white;</string>
       </property>
       <property name="text">
        <string/>
@@ -473,7 +478,7 @@ font-weight: 500
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>120</y>
+        <y>160</y>
         <width>171</width>
         <height>61</height>
        </rect>

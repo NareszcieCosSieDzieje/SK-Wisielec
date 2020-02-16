@@ -169,8 +169,20 @@ void Client::startGame() {
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));
     if (strcmp(msg2, "ROUND-START\0") == 0) {
-        cout << "ROUND STARTED ===========================================" << endl;
+        cout << "ROUND STARTED" << endl;
     } else if (strcmp(msg2, "SESSION-TIMEOUT") == 0) {
-        // TODO
+        cout << "ROUND TIMEOUT" << endl;
+        waitForPlayers();
     }
 }
+
+void Client::waitForPlayers() {
+
+}
+
+
+
+
+
+
+

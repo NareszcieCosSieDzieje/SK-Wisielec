@@ -361,7 +361,6 @@ void MainWindow::startGame(SessionStart sessionMessage) {
     client->gettingDataThread->guiMutex.lock();
     sendExitInfoToServer = false;
     QMessageBox msgBox;
-    int i = 0;
     switch (sessionMessage) {
     case SessionStart::OK:
         client->gettingDataThread->stopGettingData();
@@ -383,6 +382,8 @@ void MainWindow::prepareRound(std::string word) {
     lettersSetEnabled(false);
     ui->pages->setCurrentWidget(ui->pageGame);
     ui->labelCounter->setVisible(true);
+    QPixmap pImg(":/resources/img/p0.jpg");
+    ui->labelProgress1->setPixmap(pImg);
     int i = 0;
     for (std::pair<std::string, int> player : playersScores) {
         if (player.first != client->login) {
@@ -391,25 +392,25 @@ void MainWindow::prepareRound(std::string word) {
             case 1:
                 ui->labelPlayerName1->setText(QString::fromStdString(player.first));
                 ui->labelPoints1->setText(QString::fromStdString(to_string(player.second)));
+                ui->labelProgress1->setPixmap(pImg);
                 ui->PlayerInfo1->setVisible(true);
                 break;
             case 2:
                 ui->labelPlayerName2->setText(QString::fromStdString(player.first));
                 ui->labelPoints2->setText(QString::fromStdString(to_string(player.second)));
+                ui->labelProgress2->setPixmap(pImg);
                 ui->PlayerInfo2->setVisible(true);
                 break;
             case 3:
                 ui->labelPlayerName3->setText(QString::fromStdString(player.first));
                 ui->labelPoints3->setText(QString::fromStdString(to_string(player.second)));
+                ui->labelProgress3->setPixmap(pImg);
                 ui->PlayerInfo3->setVisible(true);
                 break;
             }
         }
     }
     this->repaint();
-    for (std::pair<std::string, int> player : playersScores) {
-
-    }
     for (int sec = 3; sec >= 1; --sec) {
         ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
         this->repaint();
@@ -434,8 +435,6 @@ void MainWindow::prepareRound(std::string word) {
     startTimeMeasuring = std::chrono::steady_clock::now();
     badAnswers = 0;
     setHangmanPicture(badAnswers);
-    QPixmap pImg(":/resources/img/p2.jpg");
-    ui->labelProgress1->setPixmap(pImg);
     ui->labelWord->setText(QString::fromStdString(hiddenWord));
     client->gettingDataThread->gettingDataType = GettingDataType::Game;
     client->gettingDataThread->start();
@@ -476,10 +475,11 @@ void MainWindow::letterClicked()
 
 void MainWindow::finishRound(string winner) {
     client->gettingDataThread->guiMutex.lock();
+    cout << "beforeround start" << endl;
     lettersSetEnabled(false);
     for (std::pair<std::string, int> player : playersScores) {
         if (player.first == winner) {
-            player.second++;
+            playersScores.at(player.first)++;
             if (player.first == client->login) {
                 ui->labelScorePoints->setText(QString::fromStdString(to_string(++playerScore)));
             }

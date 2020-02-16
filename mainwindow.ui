@@ -1192,7 +1192,7 @@ font-weight: 600</string>
         <height>61</height>
        </rect>
       </property>
-      <widget class="QLabel" name="labelProgress2_2">
+      <widget class="QLabel" name="labelProgress2">
        <property name="geometry">
         <rect>
          <x>0</x>

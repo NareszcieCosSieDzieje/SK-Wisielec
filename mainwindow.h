@@ -27,8 +27,10 @@ public:
     string getSrvName();
     void closeOnMaxPlayers();
     void onLostedConnection();
-
     void startGame();
+
+    bool sendExitInfoToServer = true;
+
 private slots:
     void on_pushButtonRegister_clicked();
 
@@ -77,8 +79,6 @@ private:
     std::atomic<bool> isTableCllickedOnce = false;
 
     QStandardItemModel *sessionsListModel;
-
-    bool connectionApproved = true;
 
     string generateWord();
 

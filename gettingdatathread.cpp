@@ -60,6 +60,7 @@ void GettingDataThread::run()
             if (strcmp(msg, "SESSION-QUIT\0") == 0){
                 emit onHostLeaveSig();
             } else if (strcmp(msg, "START-SESSION-OK\0") == 0) {
+                GUI->sendExitInfoToServer = false;
                 emit onGameStart(SessionStart::OK);
             } else if (strcmp(msg, "START-SESSION-FAIL\0") == 0) {
                 emit onGameStart(SessionStart::FAIL);

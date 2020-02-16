@@ -128,10 +128,20 @@ int Client::goToSession(int id) {
     snprintf(msg1, sizeof(msg1), "%d", id);
     writeData(clientFd, msg1, sizeof(msg1));
     if (id == 0) {
-        char msg3[100]; //TODO: SPRAWDZ CZY NAZWA SESJI MIESCI SIE W TYM !!!!!!!!!!!
+        char msg3[100];
         std::string s = GUI->getSrvName();
+        currentSessionName = s;
         strcpy(msg3, s.c_str());
         writeData(clientFd, msg3, sizeof(msg3));
+        isHost = true;
+    } else {
+        for(auto &elem : *(availableSessions)) {
+            if (elem.first == id) {
+                currentSessionName = elem.second.first;
+                break;
+            }
+        }
+        isHost = false;
     }
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));

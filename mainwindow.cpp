@@ -78,10 +78,10 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 void MainWindow::setPlayers(std::vector<string> players)
 {
     client->gettingDataThread->guiMutex.lock();
-    setButtonEnabled(ui->pushButtonStart, players.size() > 1);
+    if (client->isHost) setButtonEnabled(ui->pushButtonStart, players.size() > 1);
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
 
-    QModelIndexList indexes = ui->tableOfServers->selectionModel()->selectedIndexes();
+    QModelIndexList indexes = ui->tableOfPlayers->selectionModel()->selectedIndexes();
     int selectedRow = -1;
     if (!indexes.empty())
         selectedRow = indexes.at(0).row();
@@ -104,7 +104,7 @@ void MainWindow::setPlayers(std::vector<string> players)
         i++;
     }
     if (selectedRow != -1) {
-        ui->tableOfServers->selectRow(selectedRow);
+        ui->tableOfPlayers->selectRow(selectedRow);
     }
     client->gettingDataThread->guiMutex.unlock();
 }
@@ -294,7 +294,7 @@ void MainWindow::moveToSessionPage() {
     ui->tableOfPlayers->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableOfPlayers->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableOfPlayers->verticalHeader()->hide();
-    ui->labelSrvName->setText(ui->lineEditSrvName->text());
+    ui->labelSrvName->setText(QString::fromStdString(client->currentSessionName));
     setButtonEnabled(ui->pushButtonStart, false);
     ui->pages->setCurrentWidget(ui->pageWaitingRoom);
     client->gettingDataThread->gettingDataType = GettingDataType::Players;
@@ -471,7 +471,7 @@ void MainWindow::on_pushButtonLogout_clicked()
 void MainWindow::closeEvent (QCloseEvent *event)
 {
     client->gettingDataThread->guiMutex.lock();
-    if (connectionApproved)
+    if (sendExitInfoToServer)
         client->activateConnectionProcess(ConnectionProcesses::DISCONNECT);
     event->accept();
     client->gettingDataThread->guiMutex.unlock();
@@ -489,7 +489,7 @@ void MainWindow::on_pushButtonLeave_clicked()
 }
 
 void MainWindow::closeOnMaxPlayers() {
-    connectionApproved = false;
+    sendExitInfoToServer = false;
     QMessageBox msgBox;
     msgBox.setText("Sorry, server is overloaded. Try again later.");
     msgBox.exec();

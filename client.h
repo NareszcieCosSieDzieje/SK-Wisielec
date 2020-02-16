@@ -47,6 +47,8 @@ public:
     bool connected = true;
     MainWindow *GUI;
     std::map<int, std::pair<std::string, std::string>> *availableSessions;
+    bool isHost = false;
+    std::string currentSessionName;
 
 
     Client();

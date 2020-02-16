@@ -32,6 +32,8 @@ public:
     bool sendExitInfoToServer = true;
 
     void prepareRound(std::string word);
+
+    std::chrono::time_point<std::chrono::steady_clock> startTimeMeasuring;
 private slots:
     void on_pushButtonRegister_clicked();
 

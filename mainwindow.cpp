@@ -105,11 +105,16 @@ void MainWindow::setPlayers(std::vector<string> players)
         } else {
             model->setItem(i, 1, new QStandardItem("Host"));
         }
+        if (player == client->login) {
+            model->item(i, 0)->setBackground(Qt::darkBlue);
+            model->item(i, 1)->setBackground(Qt::darkBlue);
+        }
         i++;
     }
     if (selectedRow != -1) {
         ui->tableOfPlayers->selectRow(selectedRow);
     }
+
     client->gettingDataThread->guiMutex.unlock();
 }
 
@@ -389,7 +394,9 @@ void MainWindow::prepareRound(std::string word) {
         }
     }
     lettersSetEnabled(true);
-    setHangmanPicture(0);
+    startTimeMeasuring = std::chrono::steady_clock::now();
+    badAnswers = 0;
+    setHangmanPicture(badAnswers);
     QPixmap pImg(":/resources/img/p2.jpg");
     ui->labelProgress1->setPixmap(pImg);
     ui->labelWord->setText(QString::fromStdString(hiddenWord));
@@ -398,6 +405,7 @@ void MainWindow::prepareRound(std::string word) {
 
 void MainWindow::letterClicked()
 {
+    client->gettingDataThread->guiMutex.lock();
     QAbstractButton *button = qobject_cast<QAbstractButton*>(sender());
     setButtonEnabled(button, false);
     string letter = button->text().toStdString();
@@ -419,18 +427,13 @@ void MainWindow::letterClicked()
     while ((currentWord[checker] == '*') || (currentWord[checker] == ' ')) {
         checker++;
     }
+    client->onRoundFinish(true);
     if (checker == int(currentWord.size())) {
         lettersSetEnabled(false);
+        client->onRoundFinish(true);
     }
     ui->labelWord->setText(QString::fromStdString(hiddenWord));
-}
-
-string MainWindow::generateWord()
-{
-    srand(time(NULL));
-    const int n = 3;
-    QString words[n] = {"CAR", "MOUN TAIN", "ROOMM ATE"};
-    return words[rand() % n].toStdString();
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::moveToSessionsPage() {

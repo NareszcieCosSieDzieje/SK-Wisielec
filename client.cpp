@@ -199,6 +199,16 @@ void Client::startRound() {
     GUI->prepareRound(word);
 }
 
+void Client::onRoundFinish(bool winner) {
+    if (winner) {
+        auto stop = std::chrono::steady_clock::now();
+        auto time_span = static_cast<std::chrono::duration<double>>(stop - GUI->startTimeMeasuring);
+        char msgTime[100];
+        sprintf(msgTime, "%.2f", time_span.count());
+        cout << msgTime << endl;
+    }
+}
+
 
 
 

@@ -48,7 +48,6 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
     int selectedRow = -1;
     if (!indexes.empty())
         selectedRow = indexes.at(0).row();
-    cout << "index: " << selectedRow << endl;
 
     if (ui->tableOfServers->verticalHeader()->count()) {
         if (!model->removeRows(0, ui->tableOfServers->verticalHeader()->count())) {
@@ -80,6 +79,12 @@ void MainWindow::setPlayers(std::vector<string> players)
 {
     client->gettingDataThread->guiMutex.lock();
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
+
+    QModelIndexList indexes = ui->tableOfServers->selectionModel()->selectedIndexes();
+    int selectedRow = -1;
+    if (!indexes.empty())
+        selectedRow = indexes.at(0).row();
+
     if (ui->tableOfPlayers->verticalHeader()->count()) {
         if (!model->removeRows(0, ui->tableOfPlayers->verticalHeader()->count())) {
             cout << "RowCount() = " << ui->tableOfServers->verticalHeader()->count() << endl;
@@ -96,6 +101,9 @@ void MainWindow::setPlayers(std::vector<string> players)
             model->setItem(i, 1, new QStandardItem("Host"));
         }
         i++;
+    }
+    if (selectedRow != -1) {
+        ui->tableOfServers->selectRow(selectedRow);
     }
     client->gettingDataThread->guiMutex.unlock();
 }
@@ -286,6 +294,7 @@ void MainWindow::moveToSessionPage() {
     ui->tableOfPlayers->setEditTriggers(QAbstractItemView::NoEditTriggers);
     ui->tableOfPlayers->verticalHeader()->hide();
     ui->labelSrvName->setText(ui->lineEditSrvName->text());
+    setButtonEnabled(ui->pushButtonStart, false);
     ui->pages->setCurrentWidget(ui->pageWaitingRoom);
     client->gettingDataThread->gettingDataType = GettingDataType::Players;
     client->gettingDataThread->start();
@@ -331,38 +340,37 @@ void MainWindow::on_pushButtonStart_clicked()
     setButtonEnabled(ui->pushButtonStart, false);
     client->gettingDataThread->connectionMutex.unlock();
 
-    return;
     // TO NIŹEJ TO DO PRZENIESIENIA ===================================================
-    QObjectList buttons = ui->groupBoxLetters->children();
-    for (int i = 0; i < 26; ++i) {
-        connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
-    }
-    lettersSetEnabled(false);
-    ui->pages->setCurrentWidget(ui->pageGame);
-    this->repaint();
-    for (int sec = 3; sec >= 1; --sec) {
-        ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
-        this->repaint();
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-    ui->labelCounter->setVisible(false);
-    currentWord = generateWord();
-    for (int i = 0; i < int(currentWord.size()); ++i) {
-        if (currentWord[i] == ' ')
-        {
-            hiddenWord.append(" ");
-        }
-        else
-        {
-            hiddenWord.append("_");
-        }
-    }
-    lettersSetEnabled(true);
-    setHangmanPicture(0);
-    QPixmap pImg(":/resources/img/p2.jpg");
-    ui->labelProgress1->setPixmap(pImg);
-    ui->labelWord->setText(QString::fromStdString(hiddenWord));
-    client->gettingDataThread->guiMutex.unlock();
+//    QObjectList buttons = ui->groupBoxLetters->children();
+//    for (int i = 0; i < 26; ++i) {
+//        connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
+//    }
+//    lettersSetEnabled(false);
+//    ui->pages->setCurrentWidget(ui->pageGame);
+//    this->repaint();
+//    for (int sec = 3; sec >= 1; --sec) {
+//        ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
+//        this->repaint();
+//        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+//    }
+//    ui->labelCounter->setVisible(false);
+//    currentWord = generateWord();
+//    for (int i = 0; i < int(currentWord.size()); ++i) {
+//        if (currentWord[i] == ' ')
+//        {
+//            hiddenWord.append(" ");
+//        }
+//        else
+//        {
+//            hiddenWord.append("_");
+//        }
+//    }
+//    lettersSetEnabled(true);
+//    setHangmanPicture(0);
+//    QPixmap pImg(":/resources/img/p2.jpg");
+//    ui->labelProgress1->setPixmap(pImg);
+//    ui->labelWord->setText(QString::fromStdString(hiddenWord));
+//    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::startGame(SessionStart sessionMessage) {

@@ -882,7 +882,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             for (auto &p : currentPlayersFd) {
                 int keyFd = p.second;
                 std::string player = p.first;
-                char winner_buf[50];
+                char winner_buf[100];
                 int ret = recv(keyFd, winner_buf, sizeof(winner_buf), MSG_DONTWAIT);
                 // read 0
                 //TODO: SPRAWDZ CZY OD WSZYSTKICH WIADOMOSC MASZ ZE
@@ -891,7 +891,9 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                 }
                 if (ret > 0) {
                     if (!closing) {
-                        roundTime += 3.0;
+                        start = std::chrono::steady_clock::now();
+                        end = std::chrono::steady_clock::now();
+                        roundTime = 3.0;
                         closing = true;
                     }
                     double time = strtod(winner_buf, nullptr);

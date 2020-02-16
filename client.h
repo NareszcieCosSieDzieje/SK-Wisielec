@@ -67,10 +67,10 @@ public:
     int startSession();
     void startGame();
     void onRoundFinish(bool winner);
+    void startRound();
 private:
     void dataGetter();
     void waitForPlayers();
-    void startRound();
 };
 
 #endif // CLIENT_H

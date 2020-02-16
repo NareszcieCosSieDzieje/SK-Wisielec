@@ -173,15 +173,22 @@ int Client::createSession() {
 }
 
 void Client::startGame() {
-    cout << "im here" << endl;
     char msg1[100];
     strcpy(msg1, "PLAYER-READY\0");
     writeData(clientFd, msg1, sizeof(msg1));
+    startRound();
+
+}
+
+void Client::startRound() {
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));
     if (strcmp(msg2, "ROUND-START\0") == 0) {
         cout << "ROUND STARTED" << endl;
-        startRound();
+        char wordMsg[200];
+        readData(clientFd, wordMsg, sizeof(wordMsg));
+        std::string word(wordMsg);
+        GUI->prepareRound(word);
     } else if (strcmp(msg2, "SESSION-TIMEOUT") == 0) {
         cout << "ROUND TIMEOUT" << endl;
         waitForPlayers();
@@ -192,20 +199,17 @@ void Client::waitForPlayers() {
 
 }
 
-void Client::startRound() {
-    char wordMsg[200];
-    readData(clientFd, wordMsg, sizeof(wordMsg));
-    std::string word(wordMsg);
-    GUI->prepareRound(word);
-}
-
 void Client::onRoundFinish(bool winner) {
     if (winner) {
         auto stop = std::chrono::steady_clock::now();
         auto time_span = static_cast<std::chrono::duration<double>>(stop - GUI->startTimeMeasuring);
         char msgTime[100];
         sprintf(msgTime, "%.2f", time_span.count());
-        cout << msgTime << endl;
+        writeData(clientFd, msgTime, sizeof(msgTime));
+    } else {
+        char msgLost[100];
+        strcpy(msgLost, "PLAYER-LOST\0");
+        writeData(clientFd, msgLost, sizeof(msgLost));
     }
 }
 

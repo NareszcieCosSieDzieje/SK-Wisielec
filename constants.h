@@ -45,7 +45,8 @@ enum SessionStart {
 
 enum GettingDataType {
     Players,
-    Sessions
+    Sessions,
+    Game
 };
 
 #endif // CONSTANTS_H

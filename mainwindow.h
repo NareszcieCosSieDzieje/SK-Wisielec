@@ -34,6 +34,7 @@ public:
     void prepareRound(std::string word);
 
     std::chrono::time_point<std::chrono::steady_clock> startTimeMeasuring;
+
 private slots:
     void on_pushButtonRegister_clicked();
 
@@ -68,6 +69,8 @@ private slots:
     void on_pushButtonJoinSrv_clicked();
 
     void startGame(SessionStart sessionMessage);
+
+    void finishRound(string winner);
 private:
     Ui::MainWindow *ui;
 
@@ -82,6 +85,10 @@ private:
     std::atomic<bool> isTableCllickedOnce = false;
 
     QStandardItemModel *sessionsListModel;
+
+    std::map<int, std::string> playersScores;
+
+    int playerScore = 0;
 
     string generateWord();
 

@@ -96,6 +96,7 @@ void addToEpoll(int fd);
 void removeFromEpoll(int fd);
 void handlePlayerExit(int clientFd);
 bool validateIpAddress(const std::string &ipAddress);
+void updateCurrentPlayers(int sessionId, std::map<std::string, int> &currentPlayersFd);
 std::string loadUserData(char* filePath); 
 
 
@@ -698,8 +699,52 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
     sendUserDataCounterMutex.unlock();
 }
 
- 
 
+void updateCurrentPlayers(int sessionId, std::map<std::string, int> &currentPlayersFd){
+    currentPlayersFd.clear();
+    clientMapMutex.lock();
+    auto mapC = clientMap;
+
+//    std::vector<int> clientSockets;
+//    std::mutex clientSocketsMutex;
+//
+//    std::map<int, Player> clientMap;
+//    std::mutex clientMapMutex;
+//
+//    std::map<int, std::vector<Player>> playerSessions;
+//    std::mutex playerSessionsMutex;
+//
+//    std::map<int, std::vector<int>> playerSessionsFds;
+//    std::mutex playerSessionsFdsMutex;
+//
+//    clientMapMutex.lock();
+//    for (auto &p : players) {
+//        int keyFd = 0;
+//        for (auto &playerPair : clientMap) {
+//            if (playerPair.second.getNick() == p.getNick()) {
+//                keyFd = playerPair.first;
+//                break;
+//            }
+//        }
+//        currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
+//        playerPoints.insert(std::pair<std::string, int>(p.getNick(), 0)); //TODO: obczaj czy ok
+//    }
+//    clientMapMutex.unlock();
+    clientMapMutex.unlock();
+    playerSessionsMutex.lock();
+    auto mapP = playerSessions[sessionId];
+    playerSessionsMutex.unlock();
+    for (auto &p : mapP) {
+        int keyFd = 0;
+        for (auto &playerPair : mapC) {
+            if (playerPair.second.getNick() == p.getNick()) {
+                keyFd = playerPair.first;
+                break;
+            }
+        }
+        currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
+    }
+}
 
 void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
@@ -714,7 +759,6 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         sendUserDataCounter.erase(sessionID);
     }
     sendUserDataCounterMutex.unlock();
-
 
     char synchMsg[100];
     playerSessionsFdsMutex.lock();
@@ -765,7 +809,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
             if (players.size() < 2) {
 
-                if (players.size() == 1) { //TODO czy temu jednemu jeszcze wynik wysłać??
+                if (players.size() == 1) {
                     playerSessionsFdsMutex.lock();
                     int playerFd = playerSessionsFds[sessionID][0];
                     playerSessionsFdsMutex.unlock();
@@ -782,7 +826,6 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                 playerSessionsFdsMutex.lock();
                 playerSessionsFds.erase(sessionID);
                 playerSessionsFdsMutex.lock();
-               
                 // koniec sesji
                 return;
             }
@@ -790,29 +833,16 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
         std::map<std::string, int> currentPlayersFd{};
 
-        clientMapMutex.lock();
-        for (auto &p : players) {
-            int keyFd = 0;
-            for (auto &playerPair : clientMap) {
-                if (playerPair.second.getNick() == p.getNick()) {
-                    keyFd = playerPair.first;
-                    break;
-                }
-            }
-            currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
-            playerPoints.insert(std::pair<std::string, int>(p.getNick(), 0)); //TODO: obczaj czy ok
-        }
-        clientMapMutex.unlock();
+        updateCurrentPlayers(sessionID, currentPlayersFd);
 
-        // na początku rundy komunikat runda ok
-
-        playerSessionsFdsMutex.lock();
+        std::cout << "ROZMIAR FDS MUTEX = " <<currentPlayersFd.size() << std::endl;
         for(auto &pFd: currentPlayersFd){
             std::cout << "WYSYŁANIE ROUND START DO FD = " << pFd.second << std::endl;
             strcpy(startMsg, "ROUND-START\0");
             writeData(pFd.second, startMsg, sizeof(startMsg));
         }
-        playerSessionsFdsMutex.unlock();
+
+        updateCurrentPlayers(sessionID, currentPlayersFd);
 
         //std::terminate();
 
@@ -821,7 +851,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         std::string randomWord;
 
         while (true) {
-            randomWord = getRandomWord(); // MUTEX-NEW????????????????????????????????????????
+            randomWord = getRandomWord();
             auto it = usedWords.find(randomWord);
             if (it == usedWords.end()) {
                 usedWords.insert(randomWord);
@@ -837,20 +867,28 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             writeData(p.second, buf, sizeof(buf)); //FIXME: OGARNIJ WYRZUCANIA GRACZA!
         }
 
+        updateCurrentPlayers(sessionID, currentPlayersFd);
+
+        //TODO: update currentPlayers?
+
         auto start = std::chrono::steady_clock::now();     // start timer
-        double roundTime = 120.0 + 10.0; //2 minuty na rundę TODO: plus przesył laggi??
+        double roundTime = 60.0 + 10.0; //1 minuta na rundę TODO: plus przesył laggi??
+        std::map<std::string, bool> lostMap;
         while (true) {
             auto end = std::chrono::steady_clock::now();
             auto time_span = static_cast<std::chrono::duration<double>>(end - start);
 
             //TODO: nie blokujaca sprawdz po kazdym czy jest jakis wynik;
-            playerSessionsFdsMutex.lock();
             for (auto &p : currentPlayersFd) {
                 int keyFd = p.second;
                 std::string player = p.first;
                 char winner_buf[50];
                 int ret = recv(keyFd, winner_buf, sizeof(winner_buf), MSG_DONTWAIT);
                 // read 0
+                //TODO: SPRAWDZ CZY OD WSZYSTKICH WIADOMOSC MASZ ZE
+                if( strcmp(winner_buf, "PLAYER-LOST\0") == 0 ){
+                    lostMap.insert(std::pair<std::string, bool>(player, true));
+                }
                 if (ret > 0) {
                     if (!closing) {
                         roundTime += 3.0;
@@ -858,12 +896,18 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                     }
                     double time = strtod(winner_buf, nullptr);
                     winners.insert(std::pair<std::string, double>(player, time));
-                } else {
-                	//TODO: WYRZUC GRACZA
-                } 
+                }
             }
-            playerSessionsFdsMutex.unlock();
-            if (time_span.count() > roundTime) {
+            updateCurrentPlayers(sessionID, currentPlayersFd);
+
+            int actualSize = currentPlayersFd.size();
+            int checkSize = 0;
+            for(auto &checkP: currentPlayersFd){
+                if(lostMap.count(checkP.first) == 1){
+                    checkSize++;
+                }
+            }
+            if ( (actualSize == checkSize) || (time_span.count() > roundTime) ) {
                 break;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(50));

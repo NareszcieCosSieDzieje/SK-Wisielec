@@ -86,7 +86,7 @@ private:
 
     QStandardItemModel *sessionsListModel;
 
-    std::map<int, std::string> playersScores;
+    std::map<std::string, int> playersScores;
 
     int playerScore = 0;
 

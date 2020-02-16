@@ -41,7 +41,7 @@ std::mutex playerSessionsMutex;
 std::map<int, std::vector<int>> playerSessionsFds;
 std::mutex playerSessionsFdsMutex;
 
-std::map<int, std::string> sessionHosts; // USUWANIE HOSTA !=========================================================
+std::map<int, std::string> sessionHosts;
 std::mutex sessionHostsMutex;
 
 std::map<int, std::string> sessionNames;
@@ -65,7 +65,6 @@ const unsigned int localPort{55555};
 sockaddr_in bindAddr {
         .sin_family = AF_INET,
         .sin_port = htons(localPort),
-        // randomowy port?
         //.sin_addr.s_addr = inet_addr("127.0.0.1");
         //.sin_addr = htonl(INADDR_ANY)
 };
@@ -126,7 +125,6 @@ int main(int argc, char* argv[]){
     signal(SIGINT, sigHandler);
     signal(SIGTSTP, sigHandler);
 
-     
     startServer();
 
     struct epoll_event events[maxEvents];
@@ -752,7 +750,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
     //zbierz info o dołączaniu
 
-    cV.wait_for(uqLock, std::chrono::seconds(4)) == std::cv_status::timeout;
+    cV.wait_for(uqLock, std::chrono::seconds(4)) == std::cv_status::timeout; //TODO: usun porownanie
 
     sendUserDataCounterMutex.lock();
     if (sendUserDataCounter.count(sessionID) == 1) {
@@ -816,7 +814,6 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                     strcpy(startMsg, "SESSION-KILL\0");
                     writeData(playerFd, startMsg, sizeof(startMsg));
                 }
-                //sessionHosts.erase(sessionID);
                 sessionNamesMutex.lock();
                 sessionNames.erase(sessionID);
                 sessionNamesMutex.unlock();
@@ -971,9 +968,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                     checkForTie.push_back(points.first);
                 }
             }
-            if (checkForTie.size() > 1) {
-                //TODO: DOGRYWKA
-            } else {
+            if (checkForTie.size() <= 1) {
                 break;
             }
         }
@@ -1006,39 +1001,20 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         addToEpoll(p);
     }
     //Dodaj do epolla
- 	std::cout << "PRZED USUNIECIEM ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
- 	sessionNamesMutex.lock();
+    sessionNamesMutex.lock();
     sessionNames.erase(sessionID);
     sessionNamesMutex.unlock();
-    std::cout << "PO USUNIECIU ROZMIAR MAPY NAZW = " << sessionNames.size() << std::endl;
-
     playerSessionsMutex.lock();
     playerSessions.erase(sessionID);
     playerSessionsMutex.unlock();
     playerSessionsFdsMutex.lock();
     playerSessionsFds.erase(sessionID);
-    playerSessionsFdsMutex.unlock();
-    
-    //Wyrzuć z sesji
-
-
-    // TODO COS TAKIEGO ZE READUJE NON BLOCKIEM PO KAZDYM CURRENT PLAYER ZOBACYZC CZY ZWROCI 0  JAK TAK TO WYWAL Z GRY
-
+    playerSessionsFdsMutex.lock();
  }
 
 
- /*
-        Po rozpoczeciu gry host traktowany jest jak zwykly gracz. Tzn: jeśli opuści sesję, a przynajmniej dwóch innych graczy gra to 		   sesja dalej trwa.
-        6. Serwer obsługuje przerwania połączeń, lub wyjście z gry. Przechowuje dane gracza na czas trwania sesji, w tym jego login. 			   Pozwalaja dołączyć do następnej rundy, w przypadku zerwania połączenia przez klienta, identyfikując go przez login.
-        7. W trakcie rundy, serwer losuje słowo i wysyła je graczom, którzy muszą w określonym czasie je odgadnąć.
-           Ten kto poprawnie odgadnie jako pierwszy wygrywa. Sesja trwa n rund. Gracze mogą zdobyć 1 punkt za zwycięstwo,
-           lub 0 punktów za przegraną.
-        8. Każdy klient osobno mierzy czas rundy i wysła go do serwera, w momencie zgadnięcia hasła, żeby rozwiązać
-           problem wyróżnienia zwycięzcy (różne szybkości połączeń). Serwer po otrzymaniu komunikatu o wygranej jednego z graczy czeka 2-3 sekundy na ewentualny komunikat o wygranej innego gracza - wtedy porównuje ich czasy i wybiera zwycięzce. W przypadku gdy jeden z dwóch użytkowników wygra jako pierwszy, ale jego komunikat o wygranej dojdzie do serwera dużo później (3 sek+) niż komunikat o wygranej drugiego gracza, to drugi gracz jest wygranym, mimo iż w rzeczywistości odgadnął jako drugi.
-        9. Podczas rundy gracz widzi punkty przeciwnika, czas do końca rundy,
+ /*       9. Podczas rundy gracz widzi punkty przeciwnika, czas do końca rundy,
             numer rozgrywanej rundy/maksymalną liczbę rund, wskaźnik postępu przeciwnika.
-        10. W momencie osiągnięcia limitu błedów, gracz jest zawieszony do końca rundy.
-        11. Co każdą rundę ilość możliwości do popłenienia błedów resetuje się.
         12. W przypadku remisu, dogrywka w formie kolejnej rundy.
         13. Sesja kończy się podsumowaniem punktów graczy (scoreboard). Następnie wszyscy biorący udział w grze użytkownicy przenoszeni są do panelu wyboru/stworzenia sesji.
 */

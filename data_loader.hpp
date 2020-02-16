@@ -100,7 +100,7 @@ std::string getRandomWord(void){
     int numberOfLines = 0;
     std::string line {};
     std::ifstream wordsFile;
-    wordsFile.open("../words.txt", std::ifstream::in);
+    wordsFile.open("../words1.txt", std::ifstream::in); //FIXME: NA WORDS1!
     if(wordsFile.is_open()){
         while (std::getline(wordsFile, line)){
             ++numberOfLines;

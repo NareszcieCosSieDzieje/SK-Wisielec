@@ -820,7 +820,6 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
         //updateCurrentPlayers(sessionID, currentPlayersFd);
 
-        std::cout << "ROZMIAR FDS MUTEX = " << currentPlayersFd.size() << std::endl;
         for (auto &pFd: currentPlayersFd) {
             std::cout << "WYSYŁANIE ROUND START DO FD = " << pFd.second << std::endl;
             strcpy(startMsg, "ROUND-START\0");
@@ -965,31 +964,22 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
-    //std::map<Player, int> playerPoints{}; //TODO: wysyłaj tylko do ych co są w rundzie
+    char finishMsg[100];
+    playerSessionsFdsMutex.lock();
+    auto playerFds = playerSessionsFds[sessionID];
+    playerSessionsFdsMutex.unlock();
 
-//    char scoreBoard[1024];
-//    for(auto &points: playerPoints){
-//        strcpy(scoreBoard, points.first.c_str());
-//        strcat(scoreBoard, ":");
-//        char num[10];
-//        sprintf (num, "%d", points.second);
-//        strcat(scoreBoard, num);
-//        strcat(scoreBoard, "\n");
-//    }
-//    char check[10];
-//    playerSessionsFdsMutex.lock();
-//    for (auto &p: playerSessionsFds[sessionID]) {
-//        Player playa = clientMap[p];
-//        for(auto pointz: playerPoints){
-//            if (pointz.first == playa.getNick() ) {
-//                writeData(p, scoreBoard, sizeof(scoreBoard));
-//            }
-//        }
-//    }
+    for (auto &pFd: playerFds) {
+        strcpy(finishMsg, "GAME-OVER\0");
+        writeData(pFd, finishMsg, sizeof(finishMsg));
+    }
 
+    playerSessionsFdsMutex.lock();
     for (auto &p: playerSessionsFds[sessionID]) {
         addToEpoll(p);
     }
+    playerSessionsFdsMutex.unlock();
+
     //Dodaj do epolla
     sessionNamesMutex.lock();
     sessionNames.erase(sessionID);

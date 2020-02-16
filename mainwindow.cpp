@@ -78,6 +78,7 @@ void MainWindow::setSessions(std::map<int, std::pair<string, string>> sessions)
 void MainWindow::setPlayers(std::vector<string> players)
 {
     client->gettingDataThread->guiMutex.lock();
+    setButtonEnabled(ui->pushButtonStart, players.size() > 1);
     QStandardItemModel* model =  qobject_cast<QStandardItemModel *>(ui->tableOfPlayers->model());
 
     QModelIndexList indexes = ui->tableOfServers->selectionModel()->selectedIndexes();

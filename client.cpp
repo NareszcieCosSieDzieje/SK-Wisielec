@@ -191,6 +191,13 @@ void Client::waitForPlayers() {
 
 }
 
+void Client::startRound() {
+    char wordMsg[200];
+    readData(clientFd, wordMsg, sizeof(wordMsg));
+    std::string word(wordMsg);
+    GUI->prepareRound(word);
+}
+
 
 
 

@@ -31,6 +31,10 @@ MainWindow::MainWindow(Client *cl, QWidget *parent)
             this, SLOT(onHostLeave()));
     connect(client->gettingDataThread, SIGNAL(onGameStart(SessionStart)),
             this, SLOT(startGame(SessionStart)));
+    QObjectList buttons = ui->groupBoxLetters->children();
+    for (int i = 0; i < 26; ++i) {
+        connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
+    }
     ui->pages->setCurrentWidget(ui->pageLogin);
 }
 
@@ -341,37 +345,7 @@ void MainWindow::on_pushButtonStart_clicked()
     setButtonEnabled(ui->pushButtonStart, false);
     client->gettingDataThread->connectionMutex.unlock();
 
-    // TO NIŹEJ TO DO PRZENIESIENIA ===================================================
-//    QObjectList buttons = ui->groupBoxLetters->children();
-//    for (int i = 0; i < 26; ++i) {
-//        connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
-//    }
-//    lettersSetEnabled(false);
-//    ui->pages->setCurrentWidget(ui->pageGame);
-//    this->repaint();
-//    for (int sec = 3; sec >= 1; --sec) {
-//        ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
-//        this->repaint();
-//        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-//    }
-//    ui->labelCounter->setVisible(false);
-//    currentWord = generateWord();
-//    for (int i = 0; i < int(currentWord.size()); ++i) {
-//        if (currentWord[i] == ' ')
-//        {
-//            hiddenWord.append(" ");
-//        }
-//        else
-//        {
-//            hiddenWord.append("_");
-//        }
-//    }
-//    lettersSetEnabled(true);
-//    setHangmanPicture(0);
-//    QPixmap pImg(":/resources/img/p2.jpg");
-//    ui->labelProgress1->setPixmap(pImg);
-//    ui->labelWord->setText(QString::fromStdString(hiddenWord));
-//    client->gettingDataThread->guiMutex.unlock();
+    return;
 }
 
 void MainWindow::startGame(SessionStart sessionMessage) {
@@ -393,11 +367,39 @@ void MainWindow::startGame(SessionStart sessionMessage) {
     client->gettingDataThread->guiMutex.unlock();
 }
 
+void MainWindow::prepareRound(std::string word) {
+    lettersSetEnabled(false);
+    ui->pages->setCurrentWidget(ui->pageGame);
+    this->repaint();
+    for (int sec = 3; sec >= 1; --sec) {
+        ui->labelCounter->setText(QString::fromStdString(to_string(sec)));
+        this->repaint();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+    ui->labelCounter->setVisible(false);
+    currentWord = word;
+    for (int i = 0; i < int(currentWord.size()); ++i) {
+        if (currentWord[i] == ' ')
+        {
+            hiddenWord.append(" ");
+        }
+        else
+        {
+            hiddenWord.append("_");
+        }
+    }
+    lettersSetEnabled(true);
+    setHangmanPicture(0);
+    QPixmap pImg(":/resources/img/p2.jpg");
+    ui->labelProgress1->setPixmap(pImg);
+    ui->labelWord->setText(QString::fromStdString(hiddenWord));
+    client->gettingDataThread->guiMutex.unlock();
+}
+
 void MainWindow::letterClicked()
 {
     QAbstractButton *button = qobject_cast<QAbstractButton*>(sender());
-    button->setEnabled(false);
-    button->setStyleSheet("background-color: rgb(30, 4, 4); color: rgb(140, 140, 140)");
+    setButtonEnabled(button, false);
     string letter = button->text().toStdString();
     bool correct = false;
     while (currentWord.find(letter) != string::npos)

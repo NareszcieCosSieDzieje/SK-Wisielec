@@ -893,6 +893,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
                     if (!closing) {
                         start = std::chrono::steady_clock::now();
                         end = std::chrono::steady_clock::now();
+                        time_span = static_cast<std::chrono::duration<double>>(end - start);
                         roundTime = 3.0;
                         closing = true;
                     }

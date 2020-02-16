@@ -77,6 +77,19 @@ void GettingDataThread::run()
                 }
                 emit setPlayersSig(players);
             }
+        } else if (gettingDataType == GettingDataType::Game) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            char msg[200];
+            client->readData(client->clientFd, msg, sizeof(msg));
+            if (strcmp(msg, "WIN-0\0") == 0) {
+                emit onGameFinish("");
+            } else if (strncmp(msg, "WIN-", 4) == 0) {
+                strtok(msg, "-");
+                char *c = strtok(NULL, "-");
+                std::string winner(c);
+                emit onGameFinish(winner);
+            }
+            break;
         }
         connectionMutex.unlock();
         cout << "( OUT ) THREAD LOOP =========" << endl;

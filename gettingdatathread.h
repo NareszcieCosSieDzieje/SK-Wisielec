@@ -28,6 +28,8 @@
 #include "constants.h"
 #include "mainwindow.h"
 
+using namespace std;
+
 class Client;
 
 class MainWindow;
@@ -53,6 +55,7 @@ signals:
     void setPlayersSig(std::vector<std::string>);
     void onHostLeaveSig();
     void onGameStart(SessionStart sessionMessage);
+    void onGameFinish(string winner);
 
 private:
     Client * client;

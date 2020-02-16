@@ -13,7 +13,8 @@
 #include <set>
 #include <algorithm>
 #include <atomic>
- #include <arpa/inet.h>
+#include <arpa/inet.h>
+#include <condition_variable>
 
 #include "../statuses.hpp"
 #include "../player.hpp"
@@ -51,6 +52,12 @@ std::mutex sessionStartDataMutex;
 
 std::mutex writeToFileMutex;
 
+std::mutex conditionMutex;
+std::unique_lock<std::mutex> uqLock(conditionMutex);
+std::condition_variable cV;
+
+std::map<int, int> sendUserDataCounter;
+std::mutex sendUserDataCounterMutex;
 
 int epollFd{};
 int serverFd{};
@@ -126,7 +133,6 @@ int main(int argc, char* argv[]){
     bool polling = true;
 
     while(polling && !SERVER_SHUT_DOWN) {
-
 
         int event_count = epoll_wait(epollFd, events, maxEvents, -1);
         //printf("Ready events: %d\n", event_count);
@@ -251,6 +257,11 @@ int main(int argc, char* argv[]){
                     sessionStartDataMutex.lock();
                     sessionStartData.insert(std::pair<int, std::string>(session, msg));
                     sessionStartDataMutex.unlock();
+
+                    sendUserDataCounterMutex.lock();
+                    sendUserDataCounter.insert(std::pair<int,int>(session,0));
+                    sendUserDataCounterMutex.unlock();
+
                     // TODO: przywroc w sesji GRACZY do EPOLLA!--------------------------------------
                     std::thread sT(sessionLoop, session);
                     sT.detach(); //FIXME:??
@@ -625,7 +636,6 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
         players = playerSessions[sID];
     }
     playerSessionsMutex.unlock(); //=================================================================================MUTEX-NEW!
-    std::cout << "jest w senduserdata !" << std::endl;
     if ( sessionExists ){   
         clientMapMutex.lock();
         std::string clientNick = clientMap[clientSocket].getNick();
@@ -639,15 +649,15 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
             sessionMsg = sessionStartData[sID];
         }
         sessionStartDataMutex.unlock();
-        std::cout << "WYSYLANIE USER DATA, sessionMsg = " << sessionMsg << std::endl;
         if (sessionMsg != ""){
             if(sessionMsg == "START-SESSION-OK\0"){
-                std::cout << "PRZESZEDL POROWNANIE W USER DATA! (1) " << std::endl;
                 removeFromEpoll(clientSocket);
-                strcpy(data, "START-SESSION-OK\0"); 
+                strcpy(data, "START-SESSION-OK\0");
+                sendUserDataCounterMutex.lock();
+                sendUserDataCounter[sID] += 1;
+                sendUserDataCounterMutex.unlock();
             } else if ( (sessionMsg == "START-SESSION-FAIL\0") && (clientNick == host)) {
                 strcpy(data, "START-SESSION-FAIL\0");
-                std::cout << "PRZESZEDL POROWNANIE W USER DATA! (2) " << std::endl;
                 sessionStartDataMutex.lock();
                 sessionStartData.erase(sID);
                 sessionStartDataMutex.unlock();
@@ -669,9 +679,23 @@ void sendUserData(int clientSocket, char* msg){ //wyslij hsota
     } else {
         strcpy(data, "SESSION-QUIT\0"); //TODO: jezeli host wyjdzie to niech usunie ludzi i rozwiaze sesje
     }
-	 // std::cout << "=======================================> DANE W senduserdata: " << sID<< std::endl;
 	std::cout << "Send user data = " << data << std::endl;
     writeData(clientSocket, data, sizeof(data));
+
+    int notifySize = 0;
+    int notifyCounter = -1;
+    sendUserDataCounterMutex.lock();
+    if( sendUserDataCounter.count(sID) == 1 ){
+        playerSessionsMutex.lock();
+        notifySize = playerSessions[sID].size();
+        playerSessionsMutex.unlock();
+        notifyCounter = sendUserDataCounter[sID];
+        if (notifyCounter >= notifySize){ //TODO: to nie jest idealne
+            sendUserDataCounter.erase(sID);
+            cV.notify_one();
+        }
+    }
+    sendUserDataCounterMutex.unlock();
 }
 
  
@@ -682,7 +706,14 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     //TODO jak sie odlaczy w trakcie to tylko nie wysylaj do niego danych, czyli wywal z sesji i sprawdz na koncu co sie pokrywa
 
     //zbierz info o dołączaniu
-    std::this_thread::sleep_for(std::chrono::miliseconds(2000));
+
+    cV.wait_for(uqLock, std::chrono::seconds(4)) == std::cv_status::timeout;
+
+    sendUserDataCounterMutex.lock();
+    if( sendUserDataCounter.count(sessionID) == 1 ){
+        sendUserDataCounter.erase(sessionID);
+    }
+    sendUserDataCounterMutex.unlock();
 
 
     char synchMsg[100];
@@ -690,7 +721,6 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
     auto sessionsFds = playerSessionsFds[sessionID];
     playerSessionsFdsMutex.unlock();
     for( int i = 0; i < sessionsFds.size(); i++ ){
-        std::cout << "deskryptor pliku w sessionLoop = " << sessionsFds.at(i) << "\t playerMsg = " << synchMsg << std::endl;   
         readData( sessionsFds.at(i), synchMsg, sizeof(synchMsg));
         if ( strcmp(synchMsg, "PLAYER-READY\0") == 0 ) {
             std::cout << synchMsg << std::endl;
@@ -778,6 +808,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
         playerSessionsFdsMutex.lock();
         for(auto &pFd: currentPlayersFd){
+            std::cout << "WYSYŁANIE ROUND START DO FD = " << pFd.second << std::endl;
             strcpy(startMsg, "ROUND-START\0");
             writeData(pFd.second, startMsg, sizeof(startMsg));
         }

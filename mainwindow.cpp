@@ -376,9 +376,11 @@ void MainWindow::on_pushButtonStart_clicked()
 
 void MainWindow::startGame(SessionStart sessionMessage) {
     client->gettingDataThread->guiMutex.lock();
+    sendExitInfoToServer = false;
     QMessageBox msgBox;
     switch (sessionMessage) {
     case SessionStart::OK:
+        cout << "im here" << endl;
         client->gettingDataThread->stopGettingData();
         client->startGame();
         break;

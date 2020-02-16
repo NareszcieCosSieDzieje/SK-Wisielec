@@ -173,6 +173,7 @@ int Client::createSession() {
 }
 
 void Client::startGame() {
+    cout << "im here" << endl;
     char msg1[100];
     strcpy(msg1, "PLAYER-READY\0");
     writeData(clientFd, msg1, sizeof(msg1));

@@ -702,32 +702,6 @@ void updateCurrentPlayers(int sessionId, std::map<std::string, int> &currentPlay
     currentPlayersFd.clear();
     clientMapMutex.lock();
     auto mapC = clientMap;
-
-//    std::vector<int> clientSockets;
-//    std::mutex clientSocketsMutex;
-//
-//    std::map<int, Player> clientMap;
-//    std::mutex clientMapMutex;
-//
-//    std::map<int, std::vector<Player>> playerSessions;
-//    std::mutex playerSessionsMutex;
-//
-//    std::map<int, std::vector<int>> playerSessionsFds;
-//    std::mutex playerSessionsFdsMutex;
-//
-//    clientMapMutex.lock();
-//    for (auto &p : players) {
-//        int keyFd = 0;
-//        for (auto &playerPair : clientMap) {
-//            if (playerPair.second.getNick() == p.getNick()) {
-//                keyFd = playerPair.first;
-//                break;
-//            }
-//        }
-//        currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
-//        playerPoints.insert(std::pair<std::string, int>(p.getNick(), 0)); //TODO: obczaj czy ok
-//    }
-//    clientMapMutex.unlock();
     clientMapMutex.unlock();
     playerSessionsMutex.lock();
     auto mapP = playerSessions[sessionId];
@@ -830,7 +804,21 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
 
         std::map<std::string, int> currentPlayersFd{};
 
-        updateCurrentPlayers(sessionID, currentPlayersFd);
+        clientMapMutex.lock();
+        for (auto &p : players) {
+            int keyFd = 0;
+            for (auto &playerPair : clientMap) {
+                if (playerPair.second.getNick() == p.getNick()) {
+                    keyFd = playerPair.first;
+                    break;
+                }
+            }
+            currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
+            playerPoints.insert(std::pair<std::string, int>(p.getNick(), 0)); //TODO: obczaj czy ok
+        }
+        clientMapMutex.unlock();
+
+        //updateCurrentPlayers(sessionID, currentPlayersFd);
 
         std::cout << "ROZMIAR FDS MUTEX = " << currentPlayersFd.size() << std::endl;
         for (auto &pFd: currentPlayersFd) {
@@ -954,14 +942,16 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
             }
         }
         playerSessionsFdsMutex.unlock();
-
         if (i == rounds - 2) {
             int maxScore = -9999;
+            std::cout << "Player points = " << std::endl;
             for (auto &points : playerPoints) {
+                std::cout << "points.second = " << points.second << std::endl;
                 if (points.second > maxScore) {
                     maxScore = points.second;
                 }
             }
+            std::cout << "max score = " << maxScore <<std::endl;
             std::vector<std::string> checkForTie;
             for (auto &points : playerPoints) {
                 if (points.second == maxScore) {

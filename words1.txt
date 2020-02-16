@@ -1,3 +1,3 @@
-dog,
-dogggggggggggggggggg,
-doggggggggggggg,
+DOG,
+DOGGGGGGGGGGGGGGGGGG,
+DOGGGGGGGGGGGGG,

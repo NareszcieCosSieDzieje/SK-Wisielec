@@ -814,7 +814,7 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         }
         playerSessionsFdsMutex.unlock();
 
-        std::terminate();
+        //std::terminate();
 
         std::map<std::string, double> winners{};
         bool closing = false;
@@ -830,14 +830,12 @@ void sessionLoop(int sessionID) { //TODO: OBSŁUŻ wyjście z sesji!!
         }
 
         //Wyślij każdemu graczowi słowo.
-        playerSessionsFdsMutex.lock();
         for (auto &p : currentPlayersFd) {
-            char buf[100];
+            char buf[200];
             strcpy(buf, randomWord.c_str());
             strcat(buf, "\0");
-            writeData(p.second, buf, sizeof(buf));
+            writeData(p.second, buf, sizeof(buf)); //FIXME: OGARNIJ WYRZUCANIA GRACZA!
         }
-        playerSessionsFdsMutex.unlock();
 
         auto start = std::chrono::steady_clock::now();     // start timer
         double roundTime = 120.0 + 10.0; //2 minuty na rundę TODO: plus przesył laggi??
@@ -1105,8 +1103,14 @@ ssize_t readData(int fd, char * buffer, ssize_t buffsize){
 void writeData(int fd, char * buffer, ssize_t count){
     auto ret = write(fd, buffer, count);
     //std::cout << "Write ret: " << ret << std::endl;
-    if(ret==-1) perror("write failed on descriptor %d\n");
-    if(ret!=count) perror("wrote less than requested to descriptor %d (%ld/%ld)\n");
+    if (ret==-1) {
+        perror("write failed on descriptor %d\n");
+        clientMapMutex.lock();
+        std::cout << "\n================================wrirde error = " << fd << "\tNICK: " << clientMap[fd].getNick() << "<==============================\n" <<std::endl;
+        clientMapMutex.unlock();
+        stopConnection(fd);
+    }
+    if (ret!=count) perror("wrote less than requested to descriptor %d (%ld/%ld)\n");
 }
 
 

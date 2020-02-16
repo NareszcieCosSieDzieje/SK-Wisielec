@@ -31,6 +31,7 @@ public:
 
     bool sendExitInfoToServer = true;
 
+    void prepareRound(std::string word);
 private slots:
     void on_pushButtonRegister_clicked();
 

@@ -69,6 +69,7 @@ public:
 private:
     void dataGetter();
     void waitForPlayers();
+    void startRound();
 };
 
 #endif // CLIENT_H

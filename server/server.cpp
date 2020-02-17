@@ -815,19 +815,20 @@ void sessionLoop(int sessionID) {
                 std::string player = p.first;
                 char winner_buf[100];
                 int ret = recv(keyFd, winner_buf, sizeof(winner_buf), MSG_DONTWAIT);
-                if (strcmp(winner_buf, "PLAYER-LOST\0") == 0) {
-                    lostMap.insert(std::pair<std::string, bool>(player, true));
-                }
                 if (ret > 0) {
-                    if (!closing) {
-                        start = std::chrono::steady_clock::now();
-                        end = std::chrono::steady_clock::now();
-                        time_span = static_cast<std::chrono::duration<double>>(end - start);
-                        roundTime = 3.0;
-                        closing = true;
+                    if (strcmp(winner_buf, "PLAYER-LOST\0") == 0) {
+                        lostMap.insert(std::pair<std::string, bool>(player, true));
+                    } else {
+                        if (!closing) {
+                            start = std::chrono::steady_clock::now();
+                            end = std::chrono::steady_clock::now();
+                            time_span = static_cast<std::chrono::duration<double>>(end - start);
+                            roundTime = 3.0;
+                            closing = true;
+                        }
+                        double time = strtod(winner_buf, nullptr);
+                        winners.insert(std::pair<std::string, double>(player, time));    
                     }
-                    double time = strtod(winner_buf, nullptr);
-                    winners.insert(std::pair<std::string, double>(player, time));
                 }
             }
             updateCurrentPlayers(sessionID, currentPlayersFd);

@@ -1,14 +1,3 @@
-# SK-Wisielec
-
-### Paweł i Kamil
-* wylogowanie
-* dokończenie sesji + odpowiedzi w razie błędu
-* gra
-
-### Kamil
-* tworzenie/dołączanie do sesji
-* rejestracja
-
-### Paweł
-
-
+Budowanie:
+- serwer: plik CMakeLists.txt w folderze server
+- klient: plik CMakeLists.txt w głównym folderze projektu

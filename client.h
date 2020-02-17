@@ -49,14 +49,15 @@ public:
     std::map<int, std::pair<std::string, std::string>> *availableSessions;
     bool isHost = false;
     std::string currentSessionName;
+    char *srvAddr;
 
 
-    Client();
+    Client(char *addr);
     GettingDataThread *gettingDataThread;
     void init();
     void startClient(void);
     void closeClient(void);
-    void startConnection(void);
+    void startConnection();
     ssize_t readData(int fd, char * buffer, ssize_t buffsize);
     void writeData(int fd, char * buffer, ssize_t count);
     int authorize(char *log, char *pass, int authKind);
@@ -71,6 +72,7 @@ public:
 private:
     void dataGetter();
     void waitForPlayers();
+    bool validateIpAddress(const std::string &ipAddress);
 };
 
 #endif // CLIENT_H

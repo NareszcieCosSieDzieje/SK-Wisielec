@@ -10,7 +10,11 @@ void initializeClient();
 
 int main(int argc, char *argv[])
 {
-    client = new Client;
+    char *arg = nullptr;
+    if (argc > 1) {
+        arg = argv[1];
+    }
+    client = new Client(arg);
     QApplication application(argc, argv);
     MainWindow w(client);
     client->GUI = &w;

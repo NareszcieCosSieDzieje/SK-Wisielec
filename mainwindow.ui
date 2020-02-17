@@ -1673,7 +1673,7 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+       <string notr="true">color: rgb(211, 215, 207); font-weight: 600;
 border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
@@ -1763,7 +1763,7 @@ border-bottom: 2px solid grey</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+       <string notr="true">color: rgb(211, 215, 207); font-weight: 600;
 border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
@@ -1823,7 +1823,7 @@ border-bottom: 2px solid grey</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+       <string notr="true">color: rgb(211, 215, 207); font-weight: 600;
 border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
@@ -1883,7 +1883,7 @@ border-bottom: 2px solid grey</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+       <string notr="true">color: rgb(211, 215, 207); font-weight: 600;
 border-bottom: 2px solid grey</string>
       </property>
       <property name="text">

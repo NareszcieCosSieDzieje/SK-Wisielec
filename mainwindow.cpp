@@ -368,6 +368,7 @@ void MainWindow::startGame(SessionStart sessionMessage) {
         ui->PlayerInfo2->setVisible(false);
         ui->PlayerInfo3->setVisible(false);
         ui->labelScorePoints->setText("0");
+        ui->labelWord->clear();
         client->startGame();
         break;
     case SessionStart::FAIL:

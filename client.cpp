@@ -15,6 +15,7 @@
 #include <QMetaObject>
 #include <qobjectdefs.h>
 #include <string.h>
+#include <arpa/inet.h>
 
 #include "statuses.hpp"
 #include "player.hpp"
@@ -24,8 +25,9 @@
 
 class MainWindow;
 
-Client::Client()
+Client::Client(char *addr)
 {
+    srvAddr = addr;
     gettingDataThread = new GettingDataThread(this);
 }
 
@@ -68,8 +70,18 @@ void Client::closeClient(void){
     close(clientFd);
 }
 
-void Client::startConnection(void){
-    int err = getaddrinfo("127.0.0.1", "55555", &hints, &resolved);
+void Client::startConnection(){
+    int err;
+    if (srvAddr != nullptr){
+        if (!validateIpAddress(srvAddr)){
+            perror("Wrong ip address format!\n");
+            exit(WRONG_IP);
+        } else {
+            err = getaddrinfo(srvAddr, "55555", &hints, &resolved);
+        }
+    } else {
+        err = getaddrinfo("192.168.1.7", "55555", &hints, &resolved);
+    }
     if (err || !resolved){
         perror("Resolving address failed!\n");
         exit(GETADDRINFO_ERROR);
@@ -79,6 +91,12 @@ void Client::startConnection(void){
         exit(SOCKET_CONNECT);
     }
     freeaddrinfo(resolved);
+}
+
+bool Client::validateIpAddress(const std::string &ipAddress){
+    struct sockaddr_in sa;
+    int result = inet_pton(AF_INET, ipAddress.c_str(), &(sa.sin_addr));
+    return result == 1;
 }
 
 ssize_t Client::readData(int fd, char * buffer, ssize_t buffsize){

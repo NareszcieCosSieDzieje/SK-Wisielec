@@ -442,6 +442,10 @@ void MainWindow::prepareRound(std::string word) {
     client->gettingDataThread->start();
 }
 
+void MainWindow::onTimeout() {
+    ui->labelWinner->setText("Waiting for other players to connect ...");
+}
+
 void MainWindow::letterClicked()
 {
     client->gettingDataThread->guiMutex.lock();

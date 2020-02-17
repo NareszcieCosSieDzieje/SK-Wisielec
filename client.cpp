@@ -80,7 +80,7 @@ void Client::startConnection(){
             err = getaddrinfo(srvAddr, "55555", &hints, &resolved);
         }
     } else {
-        err = getaddrinfo("192.168.1.7", "55555", &hints, &resolved);
+        err = getaddrinfo("127.0.0.1", "55555", &hints, &resolved);
     }
     if (err || !resolved){
         perror("Resolving address failed!\n");
@@ -207,6 +207,7 @@ void Client::startRound() {
         GUI->prepareRound(word);
     } else if (strcmp(msg2, "SESSION-TIMEOUT") == 0) {
         cout << "ROUND TIMEOUT" << endl;
+        GUI->onTimeout();
         waitForPlayers();
     } else if (strcmp(msg2, "GAME-OVER\0") == 0) {
         cout << "GAME OVER" << endl;
@@ -215,7 +216,17 @@ void Client::startRound() {
 }
 
 void Client::waitForPlayers() {
-
+    char msg2[100];
+    readData(clientFd, msg2, sizeof(msg2));
+    if (strcmp(msg2, "ROUND-START\0") == 0) {
+        cout << "ROUND STARTED" << endl;
+        char wordMsg[200];
+        readData(clientFd, wordMsg, sizeof(wordMsg));
+        std::string word(wordMsg);
+        GUI->prepareRound(word);
+    } else if (strcmp(msg2, "SESSION-KILLED") == 0) {
+        GUI->gameOver();
+    }
 }
 
 void Client::onRoundFinish(bool winner) {

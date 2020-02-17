@@ -36,6 +36,7 @@ public:
     std::chrono::time_point<std::chrono::steady_clock> startTimeMeasuring;
 
     void gameOver();
+    void onTimeout();
 private slots:
     void on_pushButtonRegister_clicked();
 

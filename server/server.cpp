@@ -114,7 +114,8 @@ int main(int argc, char* argv[]){
 
     signal(SIGINT, sigHandler);
     signal(SIGTSTP, sigHandler);
-
+    signal(SIGPIPE, SIG_IGN);
+    
     startServer();
 
 

@@ -35,6 +35,7 @@ public:
 
     std::chrono::time_point<std::chrono::steady_clock> startTimeMeasuring;
 
+    void gameOver();
 private slots:
     void on_pushButtonRegister_clicked();
 
@@ -71,6 +72,8 @@ private slots:
     void startGame(SessionStart sessionMessage);
 
     void finishRound(string winner);
+    void on_pushButtonExit_clicked();
+
 private:
     Ui::MainWindow *ui;
 

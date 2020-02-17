@@ -192,6 +192,9 @@ void Client::startRound() {
     } else if (strcmp(msg2, "SESSION-TIMEOUT") == 0) {
         cout << "ROUND TIMEOUT" << endl;
         waitForPlayers();
+    } else if (strcmp(msg2, "GAME-OVER\0") == 0) {
+        cout << "GAME OVER" << endl;
+        GUI->gameOver();
     }
 }
 

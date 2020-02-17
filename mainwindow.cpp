@@ -475,7 +475,6 @@ void MainWindow::letterClicked()
 
 void MainWindow::finishRound(string winner) {
     client->gettingDataThread->guiMutex.lock();
-    cout << "beforeround start" << endl;
     lettersSetEnabled(false);
     for (std::pair<std::string, int> player : playersScores) {
         if (player.first == winner) {
@@ -513,6 +512,59 @@ void MainWindow::moveToSessionsPage() {
     ui->pages->setCurrentWidget(ui->pageSessions);
     client->gettingDataThread->gettingDataType = GettingDataType::Sessions;
     client->gettingDataThread->start();
+}
+
+void MainWindow::gameOver() {
+    client->gettingDataThread->guiMutex.lock();
+    ui->labelScoreBoardPlayer1->setVisible(false);
+    ui->labelScoreBoardPoints1->setVisible(false);
+    ui->labelScoreBoardPlayer2->setVisible(false);
+    ui->labelScoreBoardPoints2->setVisible(false);
+    ui->labelScoreBoardPlayer3->setVisible(false);
+    ui->labelScoreBoardPoints3->setVisible(false);
+    ui->labelScoreBoardPlayer4->setVisible(false);
+    ui->labelScoreBoardPoints4->setVisible(false);
+    int i = 0;
+    for (std::pair<std::string, int> player : playersScores) {
+        string s;
+        switch (i) {
+        case 0:
+            s = "1. ";
+            s.append(player.first);
+            ui->labelScoreBoardPlayer1->setText(QString::fromStdString(s));
+            ui->labelScoreBoardPoints1->setText(QString::fromStdString(to_string(player.second)));
+            ui->labelScoreBoardPlayer1->setVisible(true);
+            ui->labelScoreBoardPoints1->setVisible(true);
+            break;
+        case 1:
+            s = "2. ";
+            s.append(player.first);
+            ui->labelScoreBoardPlayer2->setText(QString::fromStdString(s));
+            ui->labelScoreBoardPoints2->setText(QString::fromStdString(to_string(player.second)));
+            ui->labelScoreBoardPlayer2->setVisible(true);
+            ui->labelScoreBoardPoints2->setVisible(true);
+            break;
+        case 2:
+            s = "3. ";
+            s.append(player.first);
+            ui->labelScoreBoardPlayer3->setText(QString::fromStdString(s));
+            ui->labelScoreBoardPoints3->setText(QString::fromStdString(to_string(player.second)));
+            ui->labelScoreBoardPlayer3->setVisible(true);
+            ui->labelScoreBoardPoints3->setVisible(true);
+            break;
+        case 3:
+            s = "4. ";
+            s.append(player.first);
+            ui->labelScoreBoardPlayer4->setText(QString::fromStdString(s));
+            ui->labelScoreBoardPoints4->setText(QString::fromStdString(to_string(player.second)));
+            ui->labelScoreBoardPlayer4->setVisible(true);
+            ui->labelScoreBoardPoints4->setVisible(true);
+            break;
+        }
+        i++;
+    }
+    ui->pages->setCurrentWidget(ui->pageScoreBoard);
+    client->gettingDataThread->guiMutex.unlock();
 }
 
 void MainWindow::on_pushButtonBackToSessions_clicked()
@@ -564,4 +616,9 @@ void MainWindow::closeOnMaxPlayers() {
     msgBox.setText("Sorry, server is overloaded. Try again later.");
     msgBox.exec();
     close();
+}
+
+void MainWindow::on_pushButtonExit_clicked()
+{
+    moveToSessionsPage();
 }

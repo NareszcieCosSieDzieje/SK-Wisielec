@@ -91,8 +91,6 @@ private:
 
     std::map<std::string, int> playersScores;
 
-    int playerScore = 0;
-
     string generateWord();
 
     void lettersSetEnabled(bool isEnabled);

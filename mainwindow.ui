@@ -63,7 +63,7 @@
      <string notr="true">background-color: black;</string>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>6</number>
     </property>
     <widget class="QWidget" name="pageLogin">
      <widget class="QLineEdit" name="lineEditLogin">
@@ -458,16 +458,16 @@ font-weight: 500
       <property name="geometry">
        <rect>
         <x>110</x>
-        <y>60</y>
+        <y>40</y>
         <width>551</width>
-        <height>51</height>
+        <height>71</height>
        </rect>
       </property>
       <property name="font">
        <font>
         <pointsize>28</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
+        <weight>50</weight>
+        <bold>false</bold>
        </font>
       </property>
       <property name="styleSheet">
@@ -476,7 +476,7 @@ padding-bottom: 5px;
 color: white;</string>
       </property>
       <property name="text">
-       <string/>
+       <string>efwefwp</string>
       </property>
      </widget>
      <widget class="QPushButton" name="pushButtonStart">
@@ -512,6 +512,13 @@ font-weight: 500
         <height>141</height>
        </rect>
       </property>
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+        <strikeout>false</strikeout>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true"/>
       </property>
@@ -529,6 +536,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -552,6 +568,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -570,6 +595,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -590,6 +624,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -608,6 +651,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -628,6 +680,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -646,6 +707,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -666,6 +736,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -685,6 +764,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -703,6 +791,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -726,9 +823,12 @@ font-weight: 500
        <property name="font">
         <font>
          <family>Ubuntu</family>
+         <pointsize>14</pointsize>
          <weight>62</weight>
          <italic>false</italic>
          <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
         </font>
        </property>
        <property name="styleSheet">
@@ -750,6 +850,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -768,6 +877,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -788,6 +906,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -806,6 +933,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -826,6 +962,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -844,6 +989,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -864,6 +1018,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -883,6 +1046,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243);
@@ -901,6 +1073,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -923,8 +1104,11 @@ font-weight: 500
        </property>
        <property name="font">
         <font>
+         <pointsize>14</pointsize>
          <weight>62</weight>
          <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
         </font>
        </property>
        <property name="styleSheet">
@@ -946,6 +1130,15 @@ font-weight: 500
          <height>51</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>50</weight>
+         <bold>false</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
 color: rgb(243, 243, 243)</string>
@@ -962,6 +1155,15 @@ color: rgb(243, 243, 243)</string>
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -981,6 +1183,15 @@ font-weight: 500
          <width>51</width>
          <height>51</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>14</pointsize>
+         <weight>62</weight>
+         <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
+        </font>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 10, 10);
@@ -1004,9 +1215,12 @@ font-weight: 500
        <property name="font">
         <font>
          <family>Ubuntu</family>
+         <pointsize>14</pointsize>
          <weight>62</weight>
          <italic>false</italic>
          <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
         </font>
        </property>
        <property name="styleSheet">
@@ -1031,9 +1245,12 @@ font-weight: 500
        <property name="font">
         <font>
          <family>Ubuntu</family>
+         <pointsize>14</pointsize>
          <weight>62</weight>
          <italic>false</italic>
          <bold>true</bold>
+         <underline>false</underline>
+         <kerning>true</kerning>
         </font>
        </property>
        <property name="styleSheet">
@@ -1060,8 +1277,8 @@ font-weight: 500
        <font>
         <family>Noto Sans Mono CJK SC</family>
         <pointsize>34</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
+        <weight>50</weight>
+        <bold>false</bold>
        </font>
       </property>
       <property name="styleSheet">
@@ -1083,8 +1300,8 @@ font-weight: 500
       <property name="font">
        <font>
         <pointsize>110</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
+        <weight>50</weight>
+        <bold>false</bold>
        </font>
       </property>
       <property name="styleSheet">
@@ -1383,8 +1600,8 @@ font-weight: 600</string>
       <property name="font">
        <font>
         <pointsize>20</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
+        <weight>50</weight>
+        <bold>false</bold>
        </font>
       </property>
       <property name="styleSheet">
@@ -1414,9 +1631,9 @@ font-weight: 600</string>
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>20</y>
-        <width>791</width>
-        <height>150</height>
+        <y>10</y>
+        <width>801</width>
+        <height>141</height>
        </rect>
       </property>
       <property name="font">
@@ -1427,10 +1644,10 @@ font-weight: 600</string>
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: rgb(150, 0, 0);font-weight: 600;</string>
+       <string notr="true">color: rgb(160, 0, 0);font-weight: 600; background: none;</string>
       </property>
       <property name="text">
-       <string>SCOREBOARD</string>
+       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;SCOREBOARD&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignCenter</set>
@@ -1456,8 +1673,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: white
-; font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1486,7 +1703,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1515,7 +1733,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1544,8 +1763,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: white
-; font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1574,7 +1793,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1603,8 +1823,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: white
-; font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1633,7 +1853,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1662,8 +1883,8 @@ font-weight: 600</string>
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: white
-; font-weight: 600;</string>
+       <string notr="true">color:  rgb(255, 244, 132); font-weight: 600;
+border-bottom: 2px solid grey</string>
       </property>
       <property name="text">
        <string/>
@@ -1691,6 +1912,33 @@ font-weight: 500
        <string>Exit</string>
       </property>
      </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>100</y>
+        <width>631</width>
+        <height>401</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">border: 5px solid rgb(99, 10, 10); border-radius: 50px;</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <zorder>label</zorder>
+     <zorder>labelScoreBoard</zorder>
+     <zorder>labelScoreBoardPlayer2</zorder>
+     <zorder>labelScoreBoardPoints2</zorder>
+     <zorder>labelScoreBoardPoints1</zorder>
+     <zorder>labelScoreBoardPlayer1</zorder>
+     <zorder>labelScoreBoardPoints3</zorder>
+     <zorder>labelScoreBoardPlayer3</zorder>
+     <zorder>labelScoreBoardPoints4</zorder>
+     <zorder>labelScoreBoardPlayer4</zorder>
+     <zorder>pushButtonExit</zorder>
     </widget>
    </widget>
   </widget>

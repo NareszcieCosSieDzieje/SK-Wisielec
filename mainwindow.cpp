@@ -351,6 +351,7 @@ void MainWindow::on_pushButtonStart_clicked()
     client->gettingDataThread->connectionMutex.lock();
     client->activateConnectionProcess(ConnectionProcesses::START_SESSION);
     setButtonEnabled(ui->pushButtonStart, false);
+    setButtonEnabled(ui->pushButtonLeave, false);
     ui->labelWinner->setVisible(false);
     client->gettingDataThread->connectionMutex.unlock();
 }
@@ -361,10 +362,12 @@ void MainWindow::startGame(SessionStart sessionMessage) {
     QMessageBox msgBox;
     switch (sessionMessage) {
     case SessionStart::OK:
+        setButtonEnabled(ui->pushButtonLeave, false);
         client->gettingDataThread->stopGettingData();
         ui->PlayerInfo1->setVisible(false);
         ui->PlayerInfo2->setVisible(false);
         ui->PlayerInfo3->setVisible(false);
+        ui->labelScorePoints->setText("0");
         client->startGame();
         break;
     case SessionStart::FAIL:
@@ -478,7 +481,7 @@ void MainWindow::finishRound(string winner) {
         if (player.first == winner) {
             playersScores.at(player.first)++;
             if (player.first == client->login) {
-                ui->labelScorePoints->setText(QString::fromStdString(to_string(++playerScore)));
+                ui->labelScorePoints->setText(QString::fromStdString(to_string(playersScores.at(player.first))));
             }
             break;
         }
@@ -486,6 +489,12 @@ void MainWindow::finishRound(string winner) {
     ui->labelWinner->setVisible(true);
     ui->labelHangman->setVisible(false);
     if (winner != "") {
+        string s(winner);
+        winner.clear();
+        winner.append("Player ");
+        winner.append("<span style=\"color: yellow\">");
+        winner.append(s);
+        winner.append("</span>");
         winner.append(" won the round");
         ui->labelWinner->setText(QString::fromStdString(winner));
     } else {
@@ -526,7 +535,6 @@ void MainWindow::gameOver() {
         string s;
         switch (i) {
         case 0:
-            s = "1. ";
             s.append(player.first);
             ui->labelScoreBoardPlayer1->setText(QString::fromStdString(s));
             ui->labelScoreBoardPoints1->setText(QString::fromStdString(to_string(player.second)));
@@ -534,7 +542,6 @@ void MainWindow::gameOver() {
             ui->labelScoreBoardPoints1->setVisible(true);
             break;
         case 1:
-            s = "2. ";
             s.append(player.first);
             ui->labelScoreBoardPlayer2->setText(QString::fromStdString(s));
             ui->labelScoreBoardPoints2->setText(QString::fromStdString(to_string(player.second)));
@@ -542,7 +549,6 @@ void MainWindow::gameOver() {
             ui->labelScoreBoardPoints2->setVisible(true);
             break;
         case 2:
-            s = "3. ";
             s.append(player.first);
             ui->labelScoreBoardPlayer3->setText(QString::fromStdString(s));
             ui->labelScoreBoardPoints3->setText(QString::fromStdString(to_string(player.second)));
@@ -550,7 +556,6 @@ void MainWindow::gameOver() {
             ui->labelScoreBoardPoints3->setVisible(true);
             break;
         case 3:
-            s = "4. ";
             s.append(player.first);
             ui->labelScoreBoardPlayer4->setText(QString::fromStdString(s));
             ui->labelScoreBoardPoints4->setText(QString::fromStdString(to_string(player.second)));

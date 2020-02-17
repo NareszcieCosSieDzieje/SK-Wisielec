@@ -930,7 +930,7 @@ void sessionLoop(int sessionID) {
     playerSessionsMutex.unlock();
     playerSessionsFdsMutex.lock();
     playerSessionsFds.erase(sessionID);
-    playerSessionsFdsMutex.lock();
+    playerSessionsFdsMutex.unlock();
  }
 
 

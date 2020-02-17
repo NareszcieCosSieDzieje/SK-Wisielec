@@ -738,6 +738,7 @@ void sessionLoop(int sessionID) {
                     playerSessionsFdsMutex.lock();
                     int playerFd = playerSessionsFds[sessionID][0];
                     playerSessionsFdsMutex.unlock();
+                    memset(startMsg, 0, sizeof(startMsg));
                     strcpy(startMsg, "SESSION-KILL\0");
                     writeData(playerFd, startMsg, sizeof(startMsg));
                 }

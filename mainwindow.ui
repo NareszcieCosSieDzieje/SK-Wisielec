@@ -60,10 +60,10 @@
      <enum>Qt::LeftToRight</enum>
     </property>
     <property name="styleSheet">
-     <string notr="true">background-color: black; font-weight: 600;</string>
+     <string notr="true">background-color: black;</string>
     </property>
     <property name="currentIndex">
-     <number>5</number>
+     <number>4</number>
     </property>
     <widget class="QWidget" name="pageLogin">
      <widget class="QLineEdit" name="lineEditLogin">
@@ -1460,7 +1460,7 @@ font-weight: 600</string>
 ; font-weight: 600;</string>
       </property>
       <property name="text">
-       <string>dfgdfg</string>
+       <string/>
       </property>
       <property name="alignment">
        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>

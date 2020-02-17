@@ -35,7 +35,7 @@ void Client::init(){
     startConnection();
     char msg[20];
     readData(clientFd, msg, sizeof(msg));
-    cout << "msg read 20" << msg << endl;
+    cout << msg << endl;
     if (strcmp("SERVER-OK\0", msg) == 0) {
         while (connected) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -145,14 +145,13 @@ int Client::goToSession(int id) {
     }
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));
-    cout << "po readzie" << endl;
     if (strncmp(msg2, "SESSION-MAX\0", 9) == 0) {
         return SessionMessage::MAX;
-    } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) { // TODO
+    } else if (strcmp(msg2, "SESSION-BUSY\0") == 0) {
         return SessionMessage::BUSY;
-    } else if (strcmp(msg2, "SESSION-KILLED\0") == 0) { // TODO
+    } else if (strcmp(msg2, "SESSION-KILLED\0") == 0) {
         return SessionMessage::KILLED;
-    } else if (strcmp(msg2, "SESSION-GOOD\0") == 0) { // TODO
+    } else if (strcmp(msg2, "SESSION-GOOD\0") == 0) {
         char msgNum[20];
         readData(clientFd, msgNum, sizeof(msgNum));
         inSessionID = std::string(msgNum);
@@ -177,7 +176,6 @@ void Client::startGame() {
     strcpy(msg1, "PLAYER-READY\0");
     writeData(clientFd, msg1, sizeof(msg1));
     startRound();
-
 }
 
 void Client::startRound() {

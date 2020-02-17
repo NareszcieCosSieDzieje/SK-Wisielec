@@ -278,7 +278,6 @@ void MainWindow::onLostedConnection() {
 
 void MainWindow::on_pushButtonCreateSrv_clicked()
 {
-    cout << ">>>>>>>> ( IN ) CREATE CONN" << endl;
     client->gettingDataThread->guiMutex.lock();
     std::cout << "CREATING SERVER" << std::endl;
     client->gettingDataThread->stopGettingData();
@@ -288,7 +287,6 @@ void MainWindow::on_pushButtonCreateSrv_clicked()
         setButtonEnabled(ui->pushButtonStart, true);
         moveToSessionPage();
         client->gettingDataThread->guiMutex.unlock();
-        cout << ">>>>>>>> ( OUT ) CREATE CONN" << endl;
         break;
     case SessionMessage::MAX:
         client->gettingDataThread->guiMutex.unlock();
@@ -494,7 +492,6 @@ void MainWindow::finishRound(string winner) {
         ui->labelWinner->setText("No one won the game :(");
     }
     client->startRound();
-    cout << "afterround start" << endl;
     client->gettingDataThread->guiMutex.unlock();
 }
 
@@ -602,11 +599,9 @@ void MainWindow::closeEvent (QCloseEvent *event)
 void MainWindow::on_pushButtonLeave_clicked()
 {
     client->gettingDataThread->guiMutex.lock();
-    cout << "######## ( IN ) LEAVE" << endl;
     client->gettingDataThread->stopGettingData();
     client->activateConnectionProcess(ConnectionProcesses::SESSION_OUT);
     moveToSessionsPage();
-    cout << "######## ( OUT ) LEAVE" << endl;
     client->gettingDataThread->guiMutex.unlock();
 }
 

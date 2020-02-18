@@ -968,20 +968,20 @@ void sessionLoop(int sessionID) {
                     if (strcmp(winner_buf, "PLAYER-LOST\0") == 0) {
                         lostMap.insert(std::pair<std::string, bool>(player, true));
                     } else if (strcmp(winner_buf, "1-4\0") == 0){
-                        if(lostMap.count(player) == 1){
-                            lostMap.erase(player);
+                        if(progressMap.count(player) == 1){
+                            progressMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "1-4"));
                         progressChanged = true;
                     } else if (strcmp(winner_buf, "2-4\0") == 0){
-                        if(lostMap.count(player) == 1){
-                            lostMap.erase(player);
+                        if(progressMap.count(player) == 1){
+                            progressMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "2-4"));
                         progressChanged = true;
                     } else if (strcmp(winner_buf, "3-4\0") == 0) {
-                        if(lostMap.count(player) == 1){
-                            lostMap.erase(player);
+                        if(progressMap.count(player) == 1){
+                            progressMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "3-4"));
                         progressChanged = true;
@@ -996,8 +996,8 @@ void sessionLoop(int sessionID) {
                         }
                         double time = strtod(winner_buf, nullptr);
                         winners.insert(std::pair<std::string, double>(player, time));
-                        /*if(lostMap.count(player) == 1){
-                            lostMap.erase(player);
+                        /*if(progressMap.count(player) == 1){
+                            progressMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "4-4"));
                         progressChanged = true;*/
@@ -1017,6 +1017,7 @@ void sessionLoop(int sessionID) {
 	                progressInfo.append(":");
 	                progressInfo.append(x.second);
 	                progressInfo.append(",");
+	                std::cout << "Progres: \t nick =" << x.first << "prog = " << x.second << std::endl;
 		        }
 	            strcpy(progressBuf, progressInfo.c_str());
 

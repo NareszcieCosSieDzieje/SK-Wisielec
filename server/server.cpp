@@ -964,23 +964,25 @@ void sessionLoop(int sessionID) {
                 }
             }
 
-            std::string progressInfo;
-            for (auto &x: progressMap){
-                progressInfo.append(x.first);
-                progressInfo.append(":");
-                progressInfo.append(x.second);
-                progressInfo.append(",");
-            }
             char progressBuf[600];
-            strcpy(progressBuf, progressInfo.c_str());
+	        std::string progressInfo;
+	            
+          	if (!progressMap.empty()){
+          		for (auto &x: progressMap){
+	                progressInfo.append(x.first);
+	                progressInfo.append(":");
+	                progressInfo.append(x.second);
+	                progressInfo.append(",");
+		        }
+	            strcpy(progressBuf, progressInfo.c_str());
 
-            updateCurrentPlayers(sessionID, currentPlayersFd);
+	            updateCurrentPlayers(sessionID, currentPlayersFd);
+	            for (auto &p : currentPlayersFd) {
+	                writeData(p.second, progressBuf, sizeof(progressBuf)); //NON BLOCKING? send MSG_DONTWAIT
+	            }
+	            updateCurrentPlayers(sessionID, currentPlayersFd);
+          	}
 
-            for (auto &p : currentPlayersFd) {
-                writeData(p.second, progressBuf, sizeof(progressBuf)); //NON BLOCKING? send MSG_DONTWAIT
-            }
-
-            updateCurrentPlayers(sessionID, currentPlayersFd);
 
             int actualSize = currentPlayersFd.size();
             int checkSize = 0;

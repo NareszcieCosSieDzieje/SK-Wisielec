@@ -996,17 +996,18 @@ void sessionLoop(int sessionID) {
                         }
                         double time = strtod(winner_buf, nullptr);
                         winners.insert(std::pair<std::string, double>(player, time));
-                        if(lostMap.count(player) == 1){
+                        /*if(lostMap.count(player) == 1){
                             lostMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "4-4"));
-                        progressChanged = true;
+                        progressChanged = true;*/
                     }
                 }
             }
 
             char progressBuf[600];
-	        std::string progressInfo;
+	        memset(progressBuf, 0, sizeof(progressBuf));
+            std::string progressInfo;
           	if (!progressMap.empty() && progressChanged){
           		progressChanged = false;
                 progressInfo.append(std::to_string(progressMap.size()));

@@ -886,6 +886,8 @@ void sessionLoop(int sessionID) {
 	    
 	    if(!setOfFds.empty()){
 		    std::string score("");
+		    score.append(std::to_string(playerPoints.size()));
+		    score.append(":");
 		    for(auto &x: playerPoints){
 		    	score.append(x.first);
 		    	score.append("-");

@@ -1003,7 +1003,7 @@ void sessionLoop(int sessionID) {
 
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
-        char endMsg[200];
+        char endMsg[600];
         //char numWin[20];
         std::string winner;
         double minTime = 9999;

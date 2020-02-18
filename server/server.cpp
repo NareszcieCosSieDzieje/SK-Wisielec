@@ -1002,6 +1002,8 @@ void sessionLoop(int sessionID) {
                         progressMap.insert(std::pair<std::string, std::string>(player, "4-4"));
                         progressChanged = true;*/
                     }
+                } else if (ret == 0) {
+                    stopConnection(keyFd);
                 }
             }
 

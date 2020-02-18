@@ -865,7 +865,7 @@ void sessionLoop(int sessionID) {
                 playerSessionsMutex.unlock();
                 playerSessionsFdsMutex.lock();
                 playerSessionsFds.erase(sessionID);
-                playerSessionsFdsMutex.lock();
+                playerSessionsFdsMutex.unlock();
                 sessionStartedMutex.lock();
                 sessionStarted.erase(sessionID);
                 sessionStartedMutex.unlock();
@@ -1080,10 +1080,10 @@ void sessionLoop(int sessionID) {
                 }
             }
         }
+        playerSessionsFdsMutex.unlock();
 
         updateCurrentPlayers(sessionID, currentPlayersFd);
 
-        playerSessionsFdsMutex.unlock();
         if (i == rounds - 2) {
             int maxScore = -9999;
             for (auto &points : playerPoints) {

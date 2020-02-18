@@ -918,6 +918,7 @@ void sessionLoop(int sessionID) {
         double roundTime = 60.0 + 10.0; //1 minuta na rundę TODO: plus przesył laggi??
         std::map<std::string, bool> lostMap;
         std::map<std::string, std::string> progressMap;
+        bool progressChanged = false;
         while (true) {
             auto end = std::chrono::steady_clock::now();
             auto time_span = static_cast<std::chrono::duration<double>>(end - start);
@@ -935,16 +936,19 @@ void sessionLoop(int sessionID) {
                             lostMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "1-4"));
+                        progressChanged = true;
                     } else if (strcmp(winner_buf, "2-4\0") == 0){
                         if(lostMap.count(player) == 1){
                             lostMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "2-4"));
+                        progressChanged = true;
                     } else if (strcmp(winner_buf, "3-4\0") == 0) {
                         if(lostMap.count(player) == 1){
                             lostMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "3-4"));
+                        progressChanged = true;
                     }
                     else { //4-4
                         if (!closing) {
@@ -960,6 +964,7 @@ void sessionLoop(int sessionID) {
                             lostMap.erase(player);
                         }
                         progressMap.insert(std::pair<std::string, std::string>(player, "4-4"));
+                        progressChanged = true;
                     }
                 }
             }
@@ -967,7 +972,8 @@ void sessionLoop(int sessionID) {
             char progressBuf[600];
 	        std::string progressInfo;
 	            
-          	if (!progressMap.empty()){
+          	if (!progressMap.empty() && progressChanged){
+          		progressChanged = false;
           		for (auto &x: progressMap){
 	                progressInfo.append(x.first);
 	                progressInfo.append(":");

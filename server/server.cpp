@@ -1007,10 +1007,11 @@ void sessionLoop(int sessionID) {
 
             char progressBuf[600];
 	        std::string progressInfo;
-	            
           	if (!progressMap.empty() && progressChanged){
           		progressChanged = false;
-          		for (auto &x: progressMap){
+                progressInfo.append(std::to_string(progressMap.size()));
+                progressInfo.append(":");
+                for (auto &x: progressMap){
 	                progressInfo.append(x.first);
 	                progressInfo.append(":");
 	                progressInfo.append(x.second);

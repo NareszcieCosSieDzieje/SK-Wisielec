@@ -802,7 +802,7 @@ void sessionLoop(int sessionID) {
         sessionsFds = playerSessionsFds[sessionID];
         playerSessionsFdsMutex.unlock();
         memset(synchMsg, 0 , sizeof(synchMsg));
-        strcpy(synchMsg, "PLAYER-CHECK\0");
+        strcpy(synchMsg, "PLAYER-CHECK1\0");
         for (int i = 0; i < sessionsFds.size(); i++) {
             writeData(sessionsFds.at(i), synchMsg, sizeof(synchMsg));
         }
@@ -827,6 +827,8 @@ void sessionLoop(int sessionID) {
             playerSessionsFdsMutex.lock();
             sessionsFds = playerSessionsFds[sessionID];
             playerSessionsFdsMutex.unlock();
+            memset(synchMsg, 0 , sizeof(synchMsg));
+            strcpy(synchMsg, "PLAYER-CHECK2\0");
             for (int i = 0; i < sessionsFds.size(); i++) {
                 writeData(sessionsFds.at(i), synchMsg, sizeof(synchMsg));
             }

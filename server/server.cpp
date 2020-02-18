@@ -61,6 +61,9 @@ std::mutex sessionStartedMutex;
 std::set<int> sessionBusy;
 std::mutex sessionBusyMutex;
 
+std::map<int, std::vector<int> > sendPlayerPointsFds;
+std::mutex sendPlayerPointsFdsMutex;
+
 int epollFd{};
 int serverFd{};
 const unsigned int localPort{55555};
@@ -462,6 +465,13 @@ void clientValidation(int newClientFd){
                         playerSessionsFdsMutex.lock();
                         playerSessionsFds[sessionId].push_back(newClientFd);
                         playerSessionsFdsMutex.unlock();
+						sendPlayerPointsFdsMutex.lock();
+						if( sendPlayerPointsFds.count(sessionId) == 0){
+							sendPlayerPointsFds.insert(std::pair<int, std::vector<int>>(sessionId, std::vector<int>(newClientFd)));
+						} else {
+							sendPlayerPointsFds[sessionId].push_back(newClientFd);
+						}      
+						sendPlayerPointsFdsMutex.unlock();
                         inserted = true;
                     }
                     sessionBusyMutex.unlock();
@@ -864,9 +874,33 @@ void sessionLoop(int sessionID) {
             }
         }
 
+                       
         sessionBusyMutex.lock();
         sessionBusy.insert(sessionID);
         sessionBusyMutex.unlock();
+
+        sendPlayerPointsFdsMutex.lock(); 
+        auto setOfFds = sendPlayerPointsFds[sessionID];
+		sendPlayerPointsFdsMutex.unlock();
+	    
+	    
+	    if(!setOfFds.empty()){
+		    std::string score("");
+		    for(auto &x: playerPoints){
+		    	score.append(x.first);
+		    	score.append("-");
+		    	score.append(std::to_string(x.second));
+		    	score.append(",");
+		    }
+		    char scoreSynchMsg[600];
+		    strcpy(scoreSynchMsg, score.c_str());
+		    for(auto &p : setOfFds){
+		    	writeData(p, scoreSynchMsg, sizeof(scoreSynchMsg));
+		    }
+	        sendPlayerPointsFdsMutex.lock(); 
+	        sendPlayerPointsFds.erase(sessionID);
+			sendPlayerPointsFdsMutex.unlock();
+	    }
 
         std::map<std::string, int> currentPlayersFd{};
 

@@ -55,6 +55,12 @@ std::condition_variable cV;
 std::map<int, int> sendUserDataCounter;
 std::mutex sendUserDataCounterMutex;
 
+std::map<int, bool> sessionStarted; //TODO: turn into set
+std::mutex sessionStartedMutex;
+
+std::set<int> sessionBusy;
+std::mutex sessionBusyMutex;
+
 int epollFd{};
 int serverFd{};
 const unsigned int localPort{55555};
@@ -115,7 +121,7 @@ int main(int argc, char* argv[]){
     signal(SIGINT, sigHandler);
     signal(SIGTSTP, sigHandler);
     signal(SIGPIPE, SIG_IGN);
-    
+
     startServer();
 
 
@@ -426,7 +432,61 @@ void clientValidation(int newClientFd){
         
         strcpy(authMsg, "AUTH-OK\0");  //Wyslij ack ze sie zalogował
         writeData(newClientFd, authMsg, sizeof(authMsg));
-        addToEpoll(newClientFd);
+
+        bool addToSession = false;
+        int sessionId=0;
+        playerSessionsMutex.lock();
+        for (auto &x: playerSessions){
+            int foundID = x.first;
+            auto players = x.second;
+            for(auto &p: players){
+                if(p.getNick() == loginS){
+                    sessionId = foundID;
+                    addToSession = true;
+                    break;
+                }
+            }
+        }
+        playerSessionsMutex.unlock();
+        if(addToSession){
+            memset(authMsg, 0, sizeof(authMsg));
+            strcpy(authMsg, "AUTH-JOIN-EXISTS\0");
+            writeData(newClientFd, authMsg, sizeof(authMsg));
+            memset(authMsg, 0, sizeof(authMsg));
+            readData(newClientFd, authMsg, sizeof(authMsg));
+            if( strcmp(authMsg, "AUTH-JOIN-YES\0") == 0 ){
+                bool inserted = false;
+                while(!inserted) {
+                    sessionBusyMutex.lock();
+                    if (sessionBusy.find(sessionId) != sessionBusy.end()){
+                        playerSessionsFdsMutex.lock();
+                        playerSessionsFds[sessionId].push_back(newClientFd);
+                        playerSessionsFdsMutex.unlock();
+                        inserted = true;
+                    }
+                    sessionBusyMutex.unlock();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                }
+            } else if (strcmp(authMsg, "AUTH-JOIN-NO\0") == 0){
+                //USUN GRACZA
+                playerSessionsMutex.lock();
+                auto it = playerSessions[sessionId].begin();
+                while (it != playerSessions[sessionId].end()) {
+                    if (it->getNick() == loginS) {
+                        it = playerSessions[sessionId].erase(it);
+                    } else {
+                        ++it;
+                    }
+                }
+                playerSessionsMutex.unlock();
+                addToEpoll(newClientFd);
+            }
+        } else {
+            memset(authMsg, 0, sizeof(authMsg));
+            strcpy(authMsg, "AUTH-JOIN-NULL\0");
+            writeData(newClientFd, authMsg, sizeof(authMsg));
+            addToEpoll(newClientFd);
+        }
     } else {
         strcpy(authMsg, "AUTH-FAIL\0");
         writeData(newClientFd, authMsg, sizeof(authMsg));
@@ -544,8 +604,16 @@ void sendSessionData(int clientSocket){
 	char data[2048]; //is it enough			
 	memset(data, 0, sizeof(data));
 
+	sessionStartedMutex.lock();
+	int sStartedSize = sessionStarted.size();
+	std::set<int> sStartedIds;
+	for (auto &x : sessionStarted){
+	    sStartedIds.insert(x.first);
+	}
+    sessionStartedMutex.unlock();
+
     playerSessionsMutex.lock();
-    int sessionSize = playerSessions.size();
+    int sessionSize = playerSessions.size() - sStartedSize;
     if ( sessionSize > 0){
   		char num[10];
         sprintf (num, "%d", sessionSize );
@@ -553,6 +621,9 @@ void sendSessionData(int clientSocket){
       	strcat(data, ":");
         for( auto const& [key, val] : playerSessions) {
             int sessionID = key;
+            if (sStartedIds.find(sessionID) != sStartedIds.end()){
+                continue;
+            }
             char num[10];
             sprintf (num, "%d", key);
             strcat(data, num);
@@ -661,7 +732,15 @@ void updateCurrentPlayers(int sessionId, std::map<std::string, int> &currentPlay
     clientMapMutex.lock();
     auto mapC = clientMap;
     clientMapMutex.unlock();
-    playerSessionsMutex.lock();
+
+    playerSessionsFdsMutex.lock();
+    auto mapFd = playerSessionsFds[sessionId];
+    playerSessionsFdsMutex.unlock();
+
+    for(auto &fd: mapFd){
+        currentPlayersFd.insert(std::pair<std::string, int>(mapC[fd].getNick(), fd));
+    }
+    /*playerSessionsMutex.lock();
     auto mapP = playerSessions[sessionId];
     playerSessionsMutex.unlock();
     for (auto &p : mapP) {
@@ -673,7 +752,7 @@ void updateCurrentPlayers(int sessionId, std::map<std::string, int> &currentPlay
             }
         }
         currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
-    }
+    }*/
 }
 
 void sessionLoop(int sessionID) {
@@ -697,6 +776,10 @@ void sessionLoop(int sessionID) {
         }
     }
 
+    sessionStartedMutex.lock();
+    sessionStarted.insert(std::pair<int, bool>(sessionID, true));
+    sessionStartedMutex.unlock();
+
     sessionStartDataMutex.lock();
     sessionStartData.erase(sessionID);
     sessionStartDataMutex.unlock();
@@ -714,9 +797,19 @@ void sessionLoop(int sessionID) {
 
         char startMsg[100];
 
-        playerSessionsMutex.lock();
-        std::vector<Player> players = playerSessions[sessionID];
-        playerSessionsMutex.unlock();
+        //ODCZYT AKUTALNYCH GRACZY
+        playerSessionsFdsMutex.lock();
+        sessionsFds = playerSessionsFds[sessionID];
+        playerSessionsFdsMutex.unlock();
+        memset(synchMsg, 0 , sizeof(synchMsg));
+        strcpy(synchMsg, "PLAYER-CHECK\0");
+        for (int i = 0; i < sessionsFds.size(); i++) {
+            writeData(sessionsFds.at(i), synchMsg, sizeof(synchMsg));
+        }
+
+        playerSessionsFdsMutex.lock();
+        std::vector<int> players = playerSessionsFds[sessionID];
+        playerSessionsFdsMutex.unlock();
 
         if (players.size() < 2) {
 
@@ -727,11 +820,20 @@ void sessionLoop(int sessionID) {
                 strcpy(startMsg, "SESSION-TIMEOUT\0");
                 writeData(playerFd, startMsg, sizeof(startMsg));
             }
+            
             std::this_thread::sleep_for(std::chrono::seconds(10));
 
-            playerSessionsMutex.lock();
-            players = playerSessions[sessionID];
-            playerSessionsMutex.unlock();
+            //ODCZYT AKUTALNYCH GRACZY
+            playerSessionsFdsMutex.lock();
+            sessionsFds = playerSessionsFds[sessionID];
+            playerSessionsFdsMutex.unlock();
+            for (int i = 0; i < sessionsFds.size(); i++) {
+                writeData(sessionsFds.at(i), synchMsg, sizeof(synchMsg));
+            }
+
+            playerSessionsFdsMutex.lock();
+            players = playerSessionsFds[sessionID];
+            playerSessionsFdsMutex.unlock();
 
             if (players.size() < 2) {
 
@@ -752,28 +854,33 @@ void sessionLoop(int sessionID) {
                 playerSessionsFdsMutex.lock();
                 playerSessionsFds.erase(sessionID);
                 playerSessionsFdsMutex.lock();
+                sessionStartedMutex.lock();
+                sessionStarted.erase(sessionID);
+                sessionStartedMutex.unlock();
                 // koniec sesji
                 return;
             }
         }
 
+        sessionBusyMutex.lock();
+        sessionBusy.insert(sessionID);
+        sessionBusyMutex.unlock();
+
         std::map<std::string, int> currentPlayersFd{};
 
         clientMapMutex.lock();
-        for (auto &p : players) {
-            int keyFd = 0;
-            for (auto &playerPair : clientMap) {
-                if (playerPair.second.getNick() == p.getNick()) {
-                    keyFd = playerPair.first;
-                    break;
-                }
-            }
-            currentPlayersFd.insert(std::pair<std::string, int>(p.getNick(), keyFd));
-            playerPoints.insert(std::pair<std::string, int>(p.getNick(), 0)); //TODO: obczaj czy ok
-        }
+        auto mapC = clientMap;
         clientMapMutex.unlock();
 
-        //updateCurrentPlayers(sessionID, currentPlayersFd);
+        playerSessionsFdsMutex.lock();
+        auto mapFd = playerSessionsFds[sessionID];
+        playerSessionsFdsMutex.unlock();
+
+        for(auto &fd: mapFd){
+            auto nick = mapC[fd].getNick();
+            currentPlayersFd.insert(std::pair<std::string, int>(nick, fd));
+            playerPoints.insert(std::pair<std::string, int>(nick, 0));
+        }
 
         for (auto &pFd: currentPlayersFd) {
             strcpy(startMsg, "ROUND-START\0");
@@ -808,6 +915,7 @@ void sessionLoop(int sessionID) {
         auto start = std::chrono::steady_clock::now();     // start timer
         double roundTime = 60.0 + 10.0; //1 minuta na rundę TODO: plus przesył laggi??
         std::map<std::string, bool> lostMap;
+        std::map<std::string, std::string> progressMap;
         while (true) {
             auto end = std::chrono::steady_clock::now();
             auto time_span = static_cast<std::chrono::duration<double>>(end - start);
@@ -820,7 +928,23 @@ void sessionLoop(int sessionID) {
                 if (ret > 0) {
                     if (strcmp(winner_buf, "PLAYER-LOST\0") == 0) {
                         lostMap.insert(std::pair<std::string, bool>(player, true));
-                    } else {
+                    } else if (strcmp(winner_buf, "1-4\0") == 0){
+                        if(lostMap.count(player) == 1){
+                            lostMap.erase(player);
+                        }
+                        progressMap.insert(std::pair<std::string, std::string>(player, "1-4"));
+                    } else if (strcmp(winner_buf, "2-4\0") == 0){
+                        if(lostMap.count(player) == 1){
+                            lostMap.erase(player);
+                        }
+                        progressMap.insert(std::pair<std::string, std::string>(player, "2-4"));
+                    } else if (strcmp(winner_buf, "3-4\0") == 0) {
+                        if(lostMap.count(player) == 1){
+                            lostMap.erase(player);
+                        }
+                        progressMap.insert(std::pair<std::string, std::string>(player, "3-4"));
+                    }
+                    else { //4-4
                         if (!closing) {
                             start = std::chrono::steady_clock::now();
                             end = std::chrono::steady_clock::now();
@@ -829,10 +953,31 @@ void sessionLoop(int sessionID) {
                             closing = true;
                         }
                         double time = strtod(winner_buf, nullptr);
-                        winners.insert(std::pair<std::string, double>(player, time));    
+                        winners.insert(std::pair<std::string, double>(player, time));
+                        if(lostMap.count(player) == 1){
+                            lostMap.erase(player);
+                        }
+                        progressMap.insert(std::pair<std::string, std::string>(player, "4-4"));
                     }
                 }
             }
+
+            std::string progressInfo;
+            for (auto &x: progressMap){
+                progressInfo.append(x.first);
+                progressInfo.append(":");
+                progressInfo.append(x.second);
+                progressInfo.append(",");
+            }
+            char progressBuf[600];
+            strcpy(progressBuf, progressInfo.c_str());
+
+            updateCurrentPlayers(sessionID, currentPlayersFd);
+
+            for (auto &p : currentPlayersFd) {
+                writeData(p.second, progressBuf, sizeof(progressBuf)); //NON BLOCKING? send MSG_DONTWAIT
+            }
+
             updateCurrentPlayers(sessionID, currentPlayersFd);
 
             int actualSize = currentPlayersFd.size();
@@ -845,6 +990,7 @@ void sessionLoop(int sessionID) {
             if ((actualSize == checkSize) || (time_span.count() > roundTime)) {
                 break;
             }
+
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
         char endMsg[200];
@@ -888,6 +1034,9 @@ void sessionLoop(int sessionID) {
                 }
             }
         }
+
+        updateCurrentPlayers(sessionID, currentPlayersFd);
+
         playerSessionsFdsMutex.unlock();
         if (i == rounds - 2) {
             int maxScore = -9999;
@@ -906,6 +1055,9 @@ void sessionLoop(int sessionID) {
                 break;
             }
         }
+        sessionBusyMutex.lock();
+        sessionBusy.erase(sessionID);
+        sessionBusyMutex.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
@@ -934,6 +1086,10 @@ void sessionLoop(int sessionID) {
     playerSessionsFdsMutex.lock();
     playerSessionsFds.erase(sessionID);
     playerSessionsFdsMutex.unlock();
+    sessionStartedMutex.lock();
+    sessionStarted.erase(sessionID);
+    sessionStartedMutex.unlock();
+
  }
 
 
@@ -1000,8 +1156,6 @@ ssize_t readData(int fd, char * buffer, ssize_t buffsize){
     //std::cout << "Read ret: " << ret << std::endl;
     if(ret == 0){
         //CLOSE CONNECTION WITH CLIENT
-        clientMapMutex.lock();
-        clientMapMutex.unlock();
         stopConnection(fd);
     }
 
@@ -1016,8 +1170,6 @@ void writeData(int fd, char * buffer, ssize_t count){
     //std::cout << "Write ret: " << ret << std::endl;
     if (ret==-1) {
         perror("write failed on descriptor %d\n");
-        clientMapMutex.lock();
-        clientMapMutex.unlock();
         stopConnection(fd);
     }
     if (ret!=count) perror("wrote less than requested to descriptor %d (%ld/%ld)\n");
@@ -1069,23 +1221,30 @@ void handlePlayerExit(int clientFd){
 		sessionHostsMutex.lock();
     	sessionHosts.erase(session);
     	sessionHostsMutex.unlock();
-    } else {             
+    } else {
 
-        playerSessionsMutex.lock();
-        
-        if (playerSessions.count(session) == 1) {
+        bool sStarted = false;
+        sessionStartedMutex.lock();
+        if (sessionStarted.count(session) == 1){
+            sStarted = true;
+        }
+        sessionStartedMutex.unlock();
 
-            auto it = playerSessions[session].begin();
-            while (it != playerSessions[session].end()) {
-                if (it->getNick() == playerNick) {
-                    it = playerSessions[session].erase(it);
-                } else {
-                    ++it;
+        //NIE USUWAJ NICKU JESLI SESJA TRWA
+        if (!sStarted){
+            playerSessionsMutex.lock();
+            if (playerSessions.count(session) == 1) {
+                auto it = playerSessions[session].begin();
+                while (it != playerSessions[session].end()) {
+                    if (it->getNick() == playerNick) {
+                        it = playerSessions[session].erase(it);
+                    } else {
+                        ++it;
+                    }
                 }
             }
+            playerSessionsMutex.unlock();
         }
-
-        playerSessionsMutex.unlock();
 
         playerSessionsFdsMutex.lock();
         if (playerSessionsFds.count(session) == 1) {

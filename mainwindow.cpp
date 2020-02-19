@@ -539,18 +539,21 @@ void MainWindow::finishRound(string winner) {
                 QString qs = QString::fromStdString(s);
                 QPixmap pImg(qs);
                 ui->labelProgress1->setPixmap(pImg);
+                this->repaint();
             } else if (player.first == ui->labelPlayerName2->text().toStdString()) {
                 string s = ":/resources/img/p4";
                 s.append(".jpg");
                 QString qs = QString::fromStdString(s);
                 QPixmap pImg(qs);
                 ui->labelProgress2->setPixmap(pImg);
+                this->repaint();
             } else if (player.first == ui->labelPlayerName3->text().toStdString()) {
                 string s = ":/resources/img/p4";
                 s.append(".jpg");
                 QString qs = QString::fromStdString(s);
                 QPixmap pImg(qs);
                 ui->labelProgress3->setPixmap(pImg);
+                this->repaint();
             }
             playersScores.at(player.first)++;
             if (player.first == client->login) {

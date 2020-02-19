@@ -804,6 +804,21 @@ void sessionLoop(int sessionID) {
 
         char startMsg[100];
 
+
+        sessionBusyMutex.lock();
+        sessionBusy.insert(sessionID);
+        sessionBusyMutex.unlock();
+
+        sendPlayerPointsFdsMutex.lock();
+        playerSessionsFdsMutex.lock();
+        auto fds = playerSessionsFds[sessionID];
+        for(auto &p : fds){
+            playerSessionsFds[sessionID].push_back(p);
+        }
+        //sendPlayerPointsFds.erase(sessionID);
+        playerSessionsFdsMutex.unlock();
+        sendPlayerPointsFdsMutex.unlock();
+
         //ODCZYT AKUTALNYCH GRACZY
         playerSessionsFdsMutex.lock();
         sessionsFds = playerSessionsFds[sessionID];
@@ -871,10 +886,6 @@ void sessionLoop(int sessionID) {
             }
         }
 
-                       
-        sessionBusyMutex.lock();
-        sessionBusy.insert(sessionID);
-        sessionBusyMutex.unlock();
 
         std::map<std::string, int> currentPlayersFd{};
 
@@ -915,13 +926,11 @@ void sessionLoop(int sessionID) {
             }
             char scoreSynchMsg[600];
             strcpy(scoreSynchMsg, score.c_str());
-            playerSessionsFdsMutex.lock();
             for(auto &p : setOfFds){
-                playerSessionsFds[sessionID].push_back(p);
                 writeData(p, scoreSynchMsg, sizeof(scoreSynchMsg));
             }
-            playerSessionsFdsMutex.unlock();
 
+            playerSessionsFdsMutex.unlock();
             sendPlayerPointsFdsMutex.lock();
             sendPlayerPointsFds.erase(sessionID);
             sendPlayerPointsFdsMutex.unlock();

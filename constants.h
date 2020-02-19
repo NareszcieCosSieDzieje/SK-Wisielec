@@ -27,6 +27,13 @@ public:
     static inline const char* DISCONNECT = "DISCONNECTING\0";
     static inline const char* LOGOUT = "LOG-OUT\0";
     static inline const char* START_SESSION = "START-SESSION\0";
+    static inline const char* JOINING_TO_EXISTING_SESSION = "AUTH-JOIN-YES\0";
+    static inline const char* NO_JOINING_TO_EXISTING_SESSION = "AUTH-JOIN-NO\0";
+};
+
+enum AlreadyInGame {
+    YES,
+    NO
 };
 
 enum SessionMessage {

@@ -27,13 +27,16 @@ public:
     string getSrvName();
     void closeOnMaxPlayers();
     void onLostedConnection();
-    void startGame();
 
     bool sendExitInfoToServer = true;
 
     void prepareRound(std::string word);
 
     std::chrono::time_point<std::chrono::steady_clock> startTimeMeasuring;
+
+    std::map<std::string, int> playersScores;
+
+    bool reJoin = false;
 
     void gameOver();
     void onTimeout();
@@ -70,11 +73,13 @@ private slots:
 
     void on_pushButtonJoinSrv_clicked();
 
-    void startGame(SessionStart sessionMessage);
+    void startGame(SessionStart sessionMessage, bool reJoin);
 
     void finishRound(string winner);
+
     void on_pushButtonExit_clicked();
 
+    void setPlayersProgresses(std::map<std::string, int> playersProgresses);
 private:
     Ui::MainWindow *ui;
 
@@ -90,7 +95,7 @@ private:
 
     QStandardItemModel *sessionsListModel;
 
-    std::map<std::string, int> playersScores;
+    bool progresses[3] {false, false, false};
 
     string generateWord();
 

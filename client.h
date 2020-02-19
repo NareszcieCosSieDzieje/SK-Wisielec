@@ -69,6 +69,9 @@ public:
     void startGame();
     void onRoundFinish(bool winner);
     void startRound();
+    int checkIfAlreadyInGame();
+    void sendIfWantsToRejoin(bool wantsToRejoin);
+    void sendProgress(int part);
 private:
     void dataGetter();
     void waitForPlayers();

@@ -199,8 +199,27 @@ void Client::startGame() {
 void Client::startRound() {
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));
+    if (strcmp(msg2, "PLAYER-CHECK1\0") == 0) {
+        memset(msg2, 0, sizeof(msg2));
+        readData(clientFd, msg2, sizeof(msg2));
+    }
     if (strcmp(msg2, "ROUND-START\0") == 0) {
         cout << "ROUND STARTED" << endl;
+        if (GUI->reJoin) {
+            char playerData[600];
+            readData(clientFd, playerData, sizeof(playerData));
+            char* s;
+            s = strtok(playerData,":");
+            long int numPlayers = strtol(s, nullptr, 10);
+            for( int i =0; i < numPlayers; i++ ) {
+                s = strtok(NULL, "-");
+                std::string player(s);
+                s = strtok(NULL, ",");
+                int points = strtol(s, nullptr, 10);
+                GUI->playersScores.insert(std::pair(player, points));
+            }
+            GUI->reJoin = false;
+        }
         char wordMsg[200];
         readData(clientFd, wordMsg, sizeof(wordMsg));
         std::string word(wordMsg);
@@ -212,20 +231,40 @@ void Client::startRound() {
     } else if (strcmp(msg2, "GAME-OVER\0") == 0) {
         cout << "GAME OVER" << endl;
         GUI->gameOver();
+    } else if (strcmp(msg2, "SESSION-KILL\0") == 0) {
+        cout << "GAME OVER" << endl;
+        GUI->gameOver();
+    } else if (strcmp(msg2, "PLAYER-CHECK2\0") == 0) {
+        GUI->onTimeout();
+        memset(msg2, 0, sizeof(msg2));
+        readData(clientFd, msg2, sizeof(msg2));
+        if (strcmp(msg2, "ROUND-START\0") == 0) {
+            cout << "ROUND STARTED" << endl;
+            char wordMsg[200];
+            readData(clientFd, wordMsg, sizeof(wordMsg));
+            std::string word(wordMsg);
+            GUI->prepareRound(word);
+        } else if (strcmp(msg2, "SESSION-KILL\0") == 0) {
+            GUI->gameOver();
+        }
     }
 }
 
 void Client::waitForPlayers() {
     char msg2[100];
     readData(clientFd, msg2, sizeof(msg2));
-    if (strcmp(msg2, "ROUND-START\0") == 0) {
-        cout << "ROUND STARTED" << endl;
-        char wordMsg[200];
-        readData(clientFd, wordMsg, sizeof(wordMsg));
-        std::string word(wordMsg);
-        GUI->prepareRound(word);
-    } else if (strcmp(msg2, "SESSION-KILLED") == 0) {
-        GUI->gameOver();
+    if (strcmp(msg2, "PLAYER-CHECK2\0") == 0) {
+        memset(msg2, 0, sizeof(msg2));
+        readData(clientFd, msg2, sizeof(msg2));
+        if (strcmp(msg2, "ROUND-START\0") == 0) {
+            cout << "ROUND STARTED" << endl;
+            char wordMsg[200];
+            readData(clientFd, wordMsg, sizeof(wordMsg));
+            std::string word(wordMsg);
+            GUI->prepareRound(word);
+        } else if (strcmp(msg2, "SESSION-KILL\0") == 0) {
+            GUI->gameOver();
+        }
     }
 }
 
@@ -241,6 +280,31 @@ void Client::onRoundFinish(bool winner) {
         strcpy(msgLost, "PLAYER-LOST\0");
         writeData(clientFd, msgLost, sizeof(msgLost));
     }
+}
+
+int Client::checkIfAlreadyInGame() {
+    char msg[100];
+    readData(clientFd, msg, sizeof(msg));
+    if (strcmp(msg, "AUTH-JOIN-EXISTS\0") == 0) {
+        return AlreadyInGame::YES;
+    } else {
+        return AlreadyInGame::NO;
+    }
+}
+
+void Client::sendIfWantsToRejoin(bool wantsToRejoin) {
+    char msg[100];
+    if (wantsToRejoin)
+        strcpy(msg, ConnectionProcesses::JOINING_TO_EXISTING_SESSION);
+    else
+        strcpy(msg, ConnectionProcesses::NO_JOINING_TO_EXISTING_SESSION);
+    writeData(clientFd, msg, sizeof(msg));
+}
+
+void Client::sendProgress(int part) {
+    char msg[100];
+    sprintf(msg, "%d-4", part);
+    writeData(clientFd, msg, sizeof(msg));
 }
 
 

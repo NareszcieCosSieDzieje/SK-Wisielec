@@ -23,21 +23,26 @@ MainWindow::MainWindow(Client *cl, QWidget *parent)
     qRegisterMetaType<std::map<int, std::pair<std::string, std::string>>>( "std::map<int, std::pair<std::string, std::string>>" );
     qRegisterMetaType<std::vector<std::string>>( "std::vector<std::string>" );
     qRegisterMetaType<string>( "string" );
+    qRegisterMetaType<bool>( "bool" );
     qRegisterMetaType<SessionStart>( "SessionStart" );
+    qRegisterMetaType<std::map<std::string, int>>( "std::map<std::string, int>" );
     connect(client->gettingDataThread, SIGNAL(setSessionSig(std::map<int, std::pair<std::string, std::string>>)),
             this, SLOT(setSessions(std::map<int, std::pair<std::string, std::string>>)));
     connect(client->gettingDataThread, SIGNAL(setPlayersSig(std::vector<std::string>)),
             this, SLOT(setPlayers(std::vector<std::string>)));
     connect(client->gettingDataThread, SIGNAL(onHostLeaveSig()),
             this, SLOT(onHostLeave()));
-    connect(client->gettingDataThread, SIGNAL(onGameStart(SessionStart)),
-            this, SLOT(startGame(SessionStart)));
+    connect(client->gettingDataThread, SIGNAL(onGameStart(SessionStart, bool)),
+            this, SLOT(startGame(SessionStart, bool)));
     connect(client->gettingDataThread, SIGNAL(onGameFinish(string)),
             this, SLOT(finishRound(string)));
+    connect(client->gettingDataThread, SIGNAL(setPlayersProgressesSig(std::map<std::string, int>)),
+            this, SLOT(setPlayersProgresses(std::map<std::string, int>)));
     QObjectList buttons = ui->groupBoxLetters->children();
     for (int i = 0; i < 26; ++i) {
         connect(buttons[i], SIGNAL(clicked()), this, SLOT(letterClicked()));
     }
+    ui->labelReco->setVisible(false);
     ui->pages->setCurrentWidget(ui->pageLogin);
 }
 
@@ -151,12 +156,31 @@ void MainWindow::on_pushButtonLogin_clicked()
         msgBox.setText("All fields are required");
         msgBox.exec();
     } else {
-        client->gettingDataThread->guiMutex.lock();
         char *login = QStringToChar(ui->lineEditLogin->text());
         char *password = QStringToChar(ui->lineEditPwd->text());
         switch (client->authorize(login, password, AuthorizationType::SIGNIN)) {
         case AuthorizationStatus::SUCCESSFUL: {
-            moveToSessionsPage();
+            switch (client->checkIfAlreadyInGame()) {
+            case AlreadyInGame::YES:
+                if (QMessageBox::Yes == QMessageBox(QMessageBox::Information, "Server is still running", "Do you want join to the server?", QMessageBox::No|QMessageBox::Yes).exec()) {
+                    ui->labelReco->setVisible(true);
+                    this->repaint();
+                    reJoin = true;
+                    startGame(SessionStart::OK, true);
+                    client->sendIfWantsToRejoin(true);
+                    ui->labelReco->setVisible(true);
+                    client->startRound();
+                    ui->labelReco->setVisible(false);
+                    this->repaint();
+                } else {
+                    client->sendIfWantsToRejoin(false);
+                    moveToSessionsPage();
+                }
+                break;
+            case AlreadyInGame::NO:
+                moveToSessionsPage();
+                break;
+            }
             break;
         }
         case AuthorizationStatus::FAILED: {
@@ -170,7 +194,6 @@ void MainWindow::on_pushButtonLogin_clicked()
             break;
         }
         }
-        client->gettingDataThread->guiMutex.unlock();
     }
 }
 
@@ -356,20 +379,22 @@ void MainWindow::on_pushButtonStart_clicked()
     client->gettingDataThread->connectionMutex.unlock();
 }
 
-void MainWindow::startGame(SessionStart sessionMessage) {
+void MainWindow::startGame(SessionStart sessionMessage, bool reJoin) {
     client->gettingDataThread->guiMutex.lock();
     sendExitInfoToServer = false;
     QMessageBox msgBox;
     switch (sessionMessage) {
     case SessionStart::OK:
         setButtonEnabled(ui->pushButtonLeave, false);
-        client->gettingDataThread->stopGettingData();
         ui->PlayerInfo1->setVisible(false);
         ui->PlayerInfo2->setVisible(false);
         ui->PlayerInfo3->setVisible(false);
         ui->labelScorePoints->setText("0");
         ui->labelWord->clear();
-        client->startGame();
+        if (!reJoin) {
+            client->gettingDataThread->stopGettingData();
+            client->startGame();
+        }
         break;
     case SessionStart::FAIL:
         setButtonEnabled(ui->pushButtonStart, true);
@@ -384,8 +409,10 @@ void MainWindow::prepareRound(std::string word) {
     lettersSetEnabled(false);
     ui->pages->setCurrentWidget(ui->pageGame);
     ui->labelCounter->setVisible(true);
+    progresses[0] = false;
+    progresses[1] = false;
+    progresses[2] = false;
     QPixmap pImg(":/resources/img/p0.jpg");
-    ui->labelProgress1->setPixmap(pImg);
     int i = 0;
     for (std::pair<std::string, int> player : playersScores) {
         if (player.first != client->login) {
@@ -396,20 +423,25 @@ void MainWindow::prepareRound(std::string word) {
                 ui->labelPoints1->setText(QString::fromStdString(to_string(player.second)));
                 ui->labelProgress1->setPixmap(pImg);
                 ui->PlayerInfo1->setVisible(true);
+                ui->labelProgress1->setPixmap(pImg);
                 break;
             case 2:
                 ui->labelPlayerName2->setText(QString::fromStdString(player.first));
                 ui->labelPoints2->setText(QString::fromStdString(to_string(player.second)));
                 ui->labelProgress2->setPixmap(pImg);
                 ui->PlayerInfo2->setVisible(true);
+                ui->labelProgress2->setPixmap(pImg);
                 break;
             case 3:
                 ui->labelPlayerName3->setText(QString::fromStdString(player.first));
                 ui->labelPoints3->setText(QString::fromStdString(to_string(player.second)));
                 ui->labelProgress3->setPixmap(pImg);
                 ui->PlayerInfo3->setVisible(true);
+                ui->labelProgress3->setPixmap(pImg);
                 break;
             }
+        } else {
+            ui->labelScorePoints->setText(QString::fromStdString(to_string(playersScores.at(player.first))));
         }
     }
     this->repaint();
@@ -468,12 +500,29 @@ void MainWindow::letterClicked()
         }
     }
     int checker = 0;
+    int correctLetters = 0;
+    for (int i = 0; i < (int)(currentWord.size()); i++)
+        if ((currentWord[i] == '*') || (currentWord[i] == ' '))
+            correctLetters++;
     while ((currentWord[checker] == '*') || (currentWord[checker] == ' ')) {
         checker++;
     }
     if (checker == int(currentWord.size())) {
         lettersSetEnabled(false);
         client->onRoundFinish(true);
+    } else {
+        double progress = (double)((double)(correctLetters)/(double)(currentWord.size()));
+        cout << "Progress = " << progress << endl;
+        if ((progress >= 0.75) && !progresses[2]) {
+           progresses[2] = true;
+           client->sendProgress(3);
+        } else if ((progress >= 0.5) && !progresses[1]) {
+            progresses[1] = true;
+            client->sendProgress(2);
+        } else if ((progress >= 0.25) && !progresses[0]) {
+            progresses[0] = true;
+            client->sendProgress(1);
+        }
     }
     ui->labelWord->setText(QString::fromStdString(hiddenWord));
     client->gettingDataThread->guiMutex.unlock();
@@ -484,6 +533,25 @@ void MainWindow::finishRound(string winner) {
     lettersSetEnabled(false);
     for (std::pair<std::string, int> player : playersScores) {
         if (player.first == winner) {
+            if (player.first == ui->labelPlayerName1->text().toStdString()) {
+                string s = ":/resources/img/p4";
+                s.append(".jpg");
+                QString qs = QString::fromStdString(s);
+                QPixmap pImg(qs);
+                ui->labelProgress1->setPixmap(pImg);
+            } else if (player.first == ui->labelPlayerName2->text().toStdString()) {
+                string s = ":/resources/img/p4";
+                s.append(".jpg");
+                QString qs = QString::fromStdString(s);
+                QPixmap pImg(qs);
+                ui->labelProgress2->setPixmap(pImg);
+            } else if (player.first == ui->labelPlayerName3->text().toStdString()) {
+                string s = ":/resources/img/p4";
+                s.append(".jpg");
+                QString qs = QString::fromStdString(s);
+                QPixmap pImg(qs);
+                ui->labelProgress3->setPixmap(pImg);
+            }
             playersScores.at(player.first)++;
             if (player.first == client->login) {
                 ui->labelScorePoints->setText(QString::fromStdString(to_string(playersScores.at(player.first))));
@@ -535,6 +603,7 @@ void MainWindow::gameOver() {
     ui->labelScoreBoardPoints3->setVisible(false);
     ui->labelScoreBoardPlayer4->setVisible(false);
     ui->labelScoreBoardPoints4->setVisible(false);
+    ui->labelWinner->setVisible(false);
     int i = 0;
     for (std::pair<std::string, int> player : playersScores) {
         string s;
@@ -626,4 +695,35 @@ void MainWindow::closeOnMaxPlayers() {
 void MainWindow::on_pushButtonExit_clicked()
 {
     moveToSessionsPage();
+}
+
+void MainWindow::setPlayersProgresses(std::map<std::string, int> playersProgresses) {
+    client->gettingDataThread->guiMutex.lock();
+    for (auto const& [player, progress] : playersProgresses) {
+        if (player != client->login) {
+            if (player == ui->labelPlayerName1->text().toStdString()) {
+                string s = ":/resources/img/p";
+                s.append(to_string(progress));
+                s.append(".jpg");
+                QString qs = QString::fromStdString(s);
+                QPixmap pImg(qs);
+                ui->labelProgress1->setPixmap(pImg);
+            } else if (player == ui->labelPlayerName2->text().toStdString()) {
+                string s = ":/resources/img/p";
+                s.append(to_string(progress));
+                s.append(".jpg");
+                QString qs = QString::fromStdString(s);
+                QPixmap pImg(qs);
+                ui->labelProgress2->setPixmap(pImg);
+            } else if (player == ui->labelPlayerName3->text().toStdString()) {
+                string s = ":/resources/img/p";
+                s.append(to_string(progress));
+                s.append(".jpg");
+                QString qs = QString::fromStdString(s);
+                QPixmap pImg(qs);
+                ui->labelProgress3->setPixmap(pImg);
+            }
+        }
+    }
+    client->gettingDataThread->guiMutex.unlock();
 }

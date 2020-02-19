@@ -21,6 +21,7 @@ void GettingDataThread::run()
             char msg[2048];
             client->readData(client->clientFd, msg, sizeof(msg));
             std::map<int, std::pair<string, string>> sessions;
+            cout << "MSG = " << msg << endl;
             if(msg[0] == '\0'){
                 std::cout << "NO-SESSIONS" << std::endl;
             } else {
@@ -50,9 +51,9 @@ void GettingDataThread::run()
             if (strcmp(msg, "SESSION-QUIT\0") == 0){
                 emit onHostLeaveSig();
             } else if (strcmp(msg, "START-SESSION-OK\0") == 0) {
-                emit onGameStart(SessionStart::OK);
+                emit onGameStart(SessionStart::OK, false);
             } else if (strcmp(msg, "START-SESSION-FAIL\0") == 0) {
-                emit onGameStart(SessionStart::FAIL);
+                emit onGameStart(SessionStart::FAIL, false);
             } else {
                 std::vector<std::string> players;
                 std::cout << msg << std::endl;
@@ -67,23 +68,40 @@ void GettingDataThread::run()
                 emit setPlayersSig(players);
             }
         } else if (gettingDataType == GettingDataType::Game) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            char msg[200];
+            char msg[600];
             client->readData(client->clientFd, msg, sizeof(msg));
             if (strcmp(msg, "WIN-0\0") == 0) {
                 emit onGameFinish("");
+                connectionMutex.unlock();
+                break;
             } else if (strncmp(msg, "WIN-", 4) == 0) {
                 strtok(msg, "-");
                 char *c = strtok(NULL, "-");
                 std::string winner(c);
                 emit onGameFinish(winner);
+                connectionMutex.unlock();
+                break;
+            } else {
+                std::map<std::string, int> playersProgresses;
+                char* s;
+                s = strtok(msg,":");
+                std::cout << 's' << s << std::endl;
+                long int numPlayers = strtol(s, nullptr, 10);
+                for( int i =0; i < numPlayers; i++ ) {
+                    s = strtok(NULL, ":");
+                    std::string player(s);
+                    s = strtok(NULL, "-");
+                    int progress = strtol(s, nullptr, 10);
+                    s = strtok(NULL, ",");
+                    playersProgresses.insert(std::pair(player, progress));
+                }
+                emit setPlayersProgressesSig(playersProgresses);
             }
-            connectionMutex.unlock();
-            break;
         }
         connectionMutex.unlock();
         if (!isGettingData) break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        if (!(gettingDataType == GettingDataType::Game))
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
 }
 

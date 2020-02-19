@@ -14,5 +14,7 @@
         <file>img/p1.jpg</file>
         <file>img/p2.jpg</file>
         <file>img/p3.jpg</file>
+        <file>img/p4.jpg</file>
     </qresource>
+    <qresource prefix="/"/>
 </RCC>

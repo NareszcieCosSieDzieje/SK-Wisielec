@@ -54,8 +54,9 @@ signals:
     void setSessionSig(std::map<int, std::pair<std::string, std::string>>);
     void setPlayersSig(std::vector<std::string>);
     void onHostLeaveSig();
-    void onGameStart(SessionStart sessionMessage);
+    void onGameStart(SessionStart sessionMessage, bool reJoin);
     void onGameFinish(string winner);
+    void setPlayersProgressesSig(std::map<std::string, int> playersProgresses);
 
 private:
     Client * client;

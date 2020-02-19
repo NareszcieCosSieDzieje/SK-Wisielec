@@ -461,14 +461,12 @@ void clientValidation(int newClientFd){
                 bool inserted = false;
                 while(!inserted) {
                     sessionBusyMutex.lock();
-                    if (sessionBusy.find(sessionId) != sessionBusy.end()){
-						sendPlayerPointsFdsMutex.lock();
+                    if (sessionBusy.find(sessionId) != sessionBusy.end()){;
 						if( sendPlayerPointsFds.count(sessionId) == 0){
 							sendPlayerPointsFds.insert(std::pair<int, std::vector<int>>(sessionId, std::vector<int>(newClientFd)));
 						} else {
 							sendPlayerPointsFds[sessionId].push_back(newClientFd);
-						}      
-						sendPlayerPointsFdsMutex.unlock();
+						}
                         inserted = true;
                     }
                     sessionBusyMutex.unlock();
@@ -930,7 +928,6 @@ void sessionLoop(int sessionID) {
                 writeData(p, scoreSynchMsg, sizeof(scoreSynchMsg));
             }
 
-            playerSessionsFdsMutex.unlock();
             sendPlayerPointsFdsMutex.lock();
             sendPlayerPointsFds.erase(sessionID);
             sendPlayerPointsFdsMutex.unlock();

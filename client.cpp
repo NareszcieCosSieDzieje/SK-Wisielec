@@ -80,7 +80,7 @@ void Client::startConnection(){
             err = getaddrinfo(srvAddr, "55555", &hints, &resolved);
         }
     } else {
-        err = getaddrinfo("127.0.0.1", "55555", &hints, &resolved);
+        err = getaddrinfo("192.168.0.100", "55555", &hints, &resolved);
     }
     if (err || !resolved){
         perror("Resolving address failed!\n");

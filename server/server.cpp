@@ -879,31 +879,6 @@ void sessionLoop(int sessionID) {
         sessionBusy.insert(sessionID);
         sessionBusyMutex.unlock();
 
-        sendPlayerPointsFdsMutex.lock(); 
-        auto setOfFds = sendPlayerPointsFds[sessionID];
-		sendPlayerPointsFdsMutex.unlock();
-	    
-	    
-	    if(!setOfFds.empty()){
-		    std::string score("");
-		    score.append(std::to_string(playerPoints.size()));
-		    score.append(":");
-		    for(auto &x: playerPoints){
-		    	score.append(x.first);
-		    	score.append("-");
-		    	score.append(std::to_string(x.second));
-		    	score.append(",");
-		    }
-		    char scoreSynchMsg[600];
-		    strcpy(scoreSynchMsg, score.c_str());
-		    for(auto &p : setOfFds){
-		    	writeData(p, scoreSynchMsg, sizeof(scoreSynchMsg));
-		    }
-	        sendPlayerPointsFdsMutex.lock(); 
-	        sendPlayerPointsFds.erase(sessionID);
-			sendPlayerPointsFdsMutex.unlock();
-	    }
-
         std::map<std::string, int> currentPlayersFd{};
 
         clientMapMutex.lock();
@@ -926,6 +901,33 @@ void sessionLoop(int sessionID) {
         }
 
         updateCurrentPlayers(sessionID, currentPlayersFd);
+
+        sendPlayerPointsFdsMutex.lock();
+        auto setOfFds = sendPlayerPointsFds[sessionID];
+        sendPlayerPointsFdsMutex.unlock();
+
+        if(!setOfFds.empty()){
+            std::string score("");
+            score.append(std::to_string(playerPoints.size()));
+            score.append(":");
+            for(auto &x: playerPoints){
+                score.append(x.first);
+                score.append("-");
+                score.append(std::to_string(x.second));
+                score.append(",");
+            }
+            char scoreSynchMsg[600];
+            strcpy(scoreSynchMsg, score.c_str());
+            for(auto &p : setOfFds){
+                writeData(p, scoreSynchMsg, sizeof(scoreSynchMsg));
+            }
+            sendPlayerPointsFdsMutex.lock();
+            sendPlayerPointsFds.erase(sessionID);
+            sendPlayerPointsFdsMutex.unlock();
+        }
+        
+        updateCurrentPlayers(sessionID, currentPlayersFd);
+
 
         std::map<std::string, double> winners{};
         bool closing = false;

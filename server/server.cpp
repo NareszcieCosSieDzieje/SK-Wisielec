@@ -809,7 +809,7 @@ void sessionLoop(int sessionID) {
 
         sendPlayerPointsFdsMutex.lock();
         playerSessionsFdsMutex.lock();
-        auto fds = playerSessionsFds[sessionID];
+        auto fds = sendPlayerPointsFds[sessionID];
         for(auto &p : fds){
             playerSessionsFds[sessionID].push_back(p);
         }
